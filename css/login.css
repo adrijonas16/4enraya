@@ -1,0 +1,119 @@
+#login-screen {
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: linear-gradient(180deg, #1e1b4b, #0f172a);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 340px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.login-logo {
+    font-size: 4rem;
+    margin-bottom: 8px;
+}
+
+.login-card h1 {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.login-subtitle {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 24px;
+}
+
+.login-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.login-tab {
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.login-tab:hover {
+    color: var(--text);
+}
+
+.login-tab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+}
+
+.login-form {
+    display: none;
+}
+
+.login-form.active {
+    display: block;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 1rem;
+}
+
+.login-form input::placeholder {
+    color: var(--muted);
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.password-wrapper {
+    position: relative;
+    margin-bottom: 12px;
+}
+
+.password-wrapper input {
+    margin-bottom: 0;
+    padding-right: 48px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.toggle-password:hover {
+    opacity: 1;
+}
+
+.login-form .btn-primary {
+    margin-top: 8px;
+}

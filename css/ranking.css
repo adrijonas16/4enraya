@@ -1,0 +1,58 @@
+.ranking-card {
+    max-width: 400px;
+}
+
+.ranking-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+
+.ranking-item.top-1 {
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.ranking-item.top-2 {
+    background: rgba(192, 192, 192, 0.1);
+    border: 1px solid rgba(192, 192, 192, 0.2);
+}
+
+.ranking-item.top-3 {
+    background: rgba(205, 127, 50, 0.1);
+    border: 1px solid rgba(205, 127, 50, 0.2);
+}
+
+.ranking-item .rank {
+    width: 36px;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.ranking-item.top-1 .rank {
+    color: #ffd700;
+}
+
+.ranking-item .username {
+    flex: 1;
+    font-weight: 600;
+}
+
+.ranking-item .points {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.ranking-loading,
+.ranking-empty {
+    color: var(--muted);
+    padding: 20px;
+}

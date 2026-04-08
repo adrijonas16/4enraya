@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>4 en Raya Brutal</title>
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/modal.css">
+    <link rel="stylesheet" href="../css/profile.css">
+    <link rel="stylesheet" href="../css/ranking.css">
+    <link rel="stylesheet" href="../css/multiplayer.css">
+    <link rel="stylesheet" href="../css/game.css">
+</head>
+<body>
+    <div id="game-screen" class="screen active">
+        <header class="header">
+            <button id="profile-btn" class="profile-btn">
+                <span>👤</span>
+                <span id="user-name">Usuario</span>
+                <span id="user-points" class="points">0 pts</span>
+            </button>
+            <div class="header-actions">
+                <button id="ranking-btn" class="btn-icon">🏆</button>
+                <button id="multiplayer-btn" class="btn-icon">🎮</button>
+            </div>
+        </header>
+
+        <div class="game-controls">
+            <select id="modeSelect">
+                <option value="">Modo ▼</option>
+                <option value="pvp">2 Jugadores</option>
+                <option value="ai">Vs IA</option>
+            </select>
+            <select id="rowsSelect">
+                <option value="6">6F</option>
+                <option value="7">7F</option>
+                <option value="8" selected>8F</option>
+                <option value="9">9F</option>
+            </select>
+            <select id="colsSelect">
+                <option value="7">7C</option>
+                <option value="8">8C</option>
+                <option value="9" selected>9C</option>
+                <option value="10">10C</option>
+            </select>
+            <select id="mapSelect">
+                <option value="classic">Clásico</option>
+                <option value="obstacles">🧱 Obstáculos</option>
+                <option value="chaos">🌪 Caos</option>
+                <option value="frozen">❄️ Congelado</option>
+                <option value="random">🎲 Aleatorio</option>
+            </select>
+            <button id="newGameBtn" class="btn-play">▶ Jugar</button>
+        </div>
+
+        <p id="mode-hint" class="mode-hint">Selecciona un modo para jugar</p>
+
+        <div id="mp-info" class="mp-info hidden">
+            <span class="mp-player red"><span class="dot"></span><span id="player-red-name">Rojo</span></span>
+            <span class="vs">VS</span>
+            <span class="mp-player yellow"><span class="dot"></span><span id="player-yellow-name">Amarillo</span></span>
+        </div>
+
+        <div class="game-info">
+            <span id="turnText">Turno: Rojo</span>
+            <span id="connectInfo">Conecta <b id="connectCount">4</b></span>
+        </div>
+
+        <div class="board-container">
+            <div id="announcement" class="announcement hidden"></div>
+            <div id="board" class="board disabled"></div>
+        </div>
+
+        <div class="powers-bar">
+            <span id="playerPoints" class="power-points">0 pts</span>
+            <button class="power-btn" data-power="bomb">💣</button>
+            <button class="power-btn" data-power="columnShift">🌊</button>
+            <button class="power-btn" data-power="freeze">❄️</button>
+            <button class="power-btn" data-power="doubleDrop">⚡</button>
+        </div>
+
+        <div class="legend">
+            <span class="chip red">Rojo</span>
+            <span class="chip yellow">Amarillo</span>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="modal hidden">
+        <div class="modal-card">
+            <button class="modal-close">&times;</button>
+            <div class="profile-avatar">👤</div>
+            <h2 id="profile-name" class="profile-name">Usuario</h2>
+            <p id="profile-email" class="profile-email">Sin email</p>
+
+            <div class="profile-form">
+                <input type="email" id="profile-email-input" placeholder="Tu email">
+                <button id="save-email-btn" class="btn-secondary">Guardar</button>
+            </div>
+
+            <div class="profile-stats">
+                <div class="stat-box">
+                    <strong id="profile-wins">0</strong>
+                    <span>Victorias</span>
+                </div>
+                <div class="stat-box">
+                    <strong id="profile-points">0</strong>
+                    <span>Puntos</span>
+                </div>
+            </div>
+
+            <button id="logout-btn" class="btn-danger">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <div id="ranking-modal" class="modal hidden">
+        <div class="modal-card ranking-card">
+            <button class="modal-close">&times;</button>
+            <h2>🏆 Ranking</h2>
+            <div id="ranking-list" class="ranking-list"></div>
+        </div>
+    </div>
+
+    <div id="multiplayer-modal" class="modal hidden">
+        <div class="modal-card">
+            <button class="modal-close">&times;</button>
+            <h2>🎮 Multijugador</h2>
+
+            <div id="mp-home" class="mp-section">
+                <button id="create-room-btn" class="btn-primary">🎯 Crear Sala</button>
+                <p class="mp-divider-text">o</p>
+                <input type="text" id="join-code-input" placeholder="Código de sala" maxlength="6">
+                <button id="join-room-btn" class="btn-secondary">🚀 Unirse</button>
+            </div>
+
+            <div id="mp-room" class="mp-section hidden">
+                <p>Código de sala:</p>
+                <div class="room-code">
+                    <strong id="room-code">------</strong>
+                    <button id="copy-code-btn" class="btn-copy">📋</button>
+                </div>
+                <p id="mp-status" class="mp-status waiting">Esperando jugador 2...</p>
+                <button id="leave-btn" class="btn-danger">Salir de Sala</button>
+            </div>
+
+            <p id="mp-error" class="error-msg"></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/utils/api.js"></script>
+    <script src="../js/components/game.js"></script>
+</body>
+</html>

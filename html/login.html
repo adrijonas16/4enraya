@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>4 en Raya Brutal - Login</title>
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+    <div id="login-screen" class="screen active">
+        <div class="login-card">
+            <div class="login-logo">🔥</div>
+            <h1>4 en Raya Brutal</h1>
+            <p class="login-subtitle">Caos, poderes y eventos inesperados</p>
+
+            <div class="login-tabs">
+                <button class="login-tab active" data-tab="login">Entrar</button>
+                <button class="login-tab" data-tab="register">Crear</button>
+            </div>
+
+            <form id="login-form" class="login-form active">
+                <input type="text" id="login-email" placeholder="Usuario o Email" required>
+                <div class="password-wrapper">
+                    <input type="password" id="login-password" placeholder="Contraseña" required>
+                    <button type="button" class="toggle-password" data-target="login-password">👁️</button>
+                </div>
+                <button type="submit" class="btn-primary">Iniciar Sesión</button>
+            </form>
+
+            <form id="register-form" class="login-form">
+                <input type="text" id="reg-username" placeholder="Nombre de usuario" required maxlength="15">
+                <input type="email" id="reg-email" placeholder="Email" required>
+                <div class="password-wrapper">
+                    <input type="password" id="reg-password" placeholder="Contraseña" required minlength="4">
+                    <button type="button" class="toggle-password" data-target="reg-password">👁️</button>
+                </div>
+                <button type="submit" class="btn-primary">Crear Cuenta</button>
+            </form>
+
+            <p id="login-error" class="error-msg"></p>
+            <p id="login-success" class="success-msg"></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/utils/api.js"></script>
+    <script src="../js/components/login.js"></script>
+</body>
+</html>
