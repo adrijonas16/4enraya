@@ -228,6 +228,135 @@ class API {
         try { this.supabase && this.supabase.removeChannel(channel); } catch (e) { /* nada */ }
     }
 
+    /* ---------- amigos ---------- */
+
+    async searchUsers(query, myId) {
+        const q = query.replace(/[%_,()]/g, '').trim();
+        if (q.length < 2) return [];
+        const { data, error } = await this.db()
+            .from('users').select('id, username, total_wins, total_points')
+            .ilike('username', q + '%').neq('id', myId).limit(8);
+        if (error) throw error;
+        return data || [];
+    }
+
+    async getFriends(myId) {
+        const { data: rows, error } = await this.db()
+            .from('friendships').select('*')
+            .or(`requester_id.eq.${myId},addressee_id.eq.${myId}`);
+        if (error) throw error;
+        const otherIds = [...new Set((rows || []).map(r => (r.requester_id === myId ? r.addressee_id : r.requester_id)))];
+        let people = [];
+        if (otherIds.length) {
+            const { data } = await this.db().from('users')
+                .select('id, username, total_wins, total_points').in('id', otherIds);
+            people = data || [];
+        }
+        const byId = Object.fromEntries(people.map(p => [p.id, p]));
+        const out = { friends: [], incoming: [], outgoing: [] };
+        (rows || []).forEach(r => {
+            const otherId = r.requester_id === myId ? r.addressee_id : r.requester_id;
+            const person = byId[otherId];
+            if (!person) return;
+            const item = { ...person, friendshipId: r.id, since: r.responded_at || r.created_at };
+            if (r.status === 'accepted') out.friends.push(item);
+            else if (r.addressee_id === myId) out.incoming.push(item);
+            else out.outgoing.push(item);
+        });
+        out.friends.sort((a, b) => a.username.localeCompare(b.username));
+        return out;
+    }
+
+    async sendFriendRequest(myId, otherId) {
+        // si el otro ya me la había enviado, se acepta directamente
+        const { data: reverse } = await this.db().from('friendships').select('id, status')
+            .eq('requester_id', otherId).eq('addressee_id', myId).maybeSingle();
+        if (reverse) {
+            if (reverse.status === 'pending') await this.respondFriend(reverse.id, true);
+            return 'accepted';
+        }
+        const { error } = await this.db().from('friendships')
+            .insert([{ requester_id: myId, addressee_id: otherId }]);
+        if (error) {
+            if (error.code === '23505') throw new Error('Ya son amigos o hay una solicitud pendiente');
+            throw error;
+        }
+        return 'sent';
+    }
+
+    async respondFriend(friendshipId, accept) {
+        const q = accept
+            ? this.db().from('friendships').update({ status: 'accepted', responded_at: new Date().toISOString() }).eq('id', friendshipId)
+            : this.db().from('friendships').delete().eq('id', friendshipId);
+        const { error } = await q;
+        if (error) throw error;
+    }
+
+    async removeFriend(friendshipId) {
+        const { error } = await this.db().from('friendships').delete().eq('id', friendshipId);
+        if (error) throw error;
+    }
+
+    // victorias y derrotas de un jugador contra cada uno de los nombres dados
+    async headToHead(myName, names) {
+        if (!names.length) return {};
+        const { data } = await this.db().from('game_history')
+            .select('opponent, won').eq('player_name', myName).in('opponent', names);
+        const out = {};
+        (data || []).forEach(g => {
+            const r = out[g.opponent] || (out[g.opponent] = { won: 0, lost: 0 });
+            g.won ? r.won++ : r.lost++;
+        });
+        return out;
+    }
+
+    /* ---------- retos ---------- */
+
+    async sendInvite(fromId, fromName, toId, roomCode) {
+        // cancela retos anteriores sin responder a la misma persona
+        await this.db().from('game_invites').update({ status: 'expired' })
+            .eq('from_id', fromId).eq('to_id', toId).eq('status', 'pending');
+        const { error } = await this.db().from('game_invites')
+            .insert([{ from_id: fromId, from_name: fromName, to_id: toId, room_code: roomCode }]);
+        if (error) throw error;
+    }
+
+    async pendingInvites(myId) {
+        const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data } = await this.db().from('game_invites').select('*')
+            .eq('to_id', myId).eq('status', 'pending').gte('created_at', since)
+            .order('created_at', { ascending: false });
+        return data || [];
+    }
+
+    async respondInvite(inviteId, status) {
+        await this.db().from('game_invites').update({ status }).eq('id', inviteId);
+    }
+
+    /* ---------- avisos en tiempo real y presencia ---------- */
+
+    subscribeSocial(myId, onFriendship, onInvite) {
+        return this.db()
+            .channel('social:' + myId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships', filter: `addressee_id=eq.${myId}` }, p => onFriendship(p, 'in'))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships', filter: `requester_id=eq.${myId}` }, p => onFriendship(p, 'out'))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_invites', filter: `to_id=eq.${myId}` }, p => onInvite(p.new))
+            .subscribe();
+    }
+
+    joinPresence(user, onChange) {
+        const ch = this.db().channel('lobby', { config: { presence: { key: user.id } } });
+        ch.on('presence', { event: 'sync' }, () => {
+            const state = ch.presenceState();
+            const map = {};
+            Object.entries(state).forEach(([id, metas]) => { map[id] = metas[metas.length - 1] || {}; });
+            onChange(map);
+        }).subscribe(async status => {
+            if (status === 'SUBSCRIBED') await ch.track({ username: user.username, playing: false });
+        });
+        return ch;
+    }
+
     generateRoomCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';

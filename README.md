@@ -44,6 +44,8 @@ La base de datos ya está preparada (columna `users.auth_id` y función `login_w
 
 Estilos de tablero: Clásico, Madera, Neón, Cristal, Noche y oro, Lava y Caramelo. Se eligen en «Estilo del tablero» y se pueden cambiar a mitad de partida.
 
+Amigos: busca a otros jugadores por su nombre, envía solicitudes, mira quién está conectado y cuántas veces le has ganado, y rétalo a una partida online con un toque (le llega un aviso en el momento). Requiere cuenta.
+
 Controles: ratón o toque, o teclado (`←` `→` apuntar, `Espacio` soltar, `1`–`4` poderes, `Esc` cancelar).
 
 ## Estructura
@@ -61,12 +63,13 @@ js/fx.js                sonido sintetizado y partículas
 js/scene.js             fondo animado (auroras, fichas flotando, destellos)
 js/components/game.js   interfaz, animaciones, flujo y online
 js/components/login.js
+js/components/social.js amigos, presencia y retos
 js/utils/api.js         Supabase (el juego funciona aunque no cargue)
 ```
 
 ## Online (Supabase)
 
-Usa las tablas existentes `users`, `rooms`, `games`, `game_history`, `rankings` y las funciones `increment_wins` / `increment_points`.
+Usa las tablas `users`, `rooms`, `games`, `game_history`, `rankings`, `friendships`, `game_invites` y las funciones `increment_wins` / `increment_points`.
 El estado completo de la partida (fichas, hielo, cargas, eventos) se guarda en `games.board_state` como JSON con `v: 2`, así ambos jugadores ven exactamente lo mismo. Las partidas guardadas con la versión anterior no son compatibles.
 
 Solo cuentan para el ranking las partidas contra la IA y las online; las de dos jugadores en el mismo dispositivo no.

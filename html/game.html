@@ -34,6 +34,11 @@
             <button class="icon-btn" id="ranking-btn" title="Ranking" aria-label="Ranking">
                 <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 20h18v-2H3zM5 17h3v-6H5zm5.5 0h3V5h-3zM16 17h3V9h-3z"/></svg>
             </button>
+            <button class="pill-btn friends-btn" id="friends-btn" aria-label="Amigos">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-7 1.7-7 4v2h14v-2c0-2.3-3.7-4-7-4zm7.5-2.2a3.3 3.3 0 1 0 0-6.6 3.3 3.3 0 0 0 0 6.6zM17 13c-.5 0-1 0-1.5.1 1.5 1 2.5 2.3 2.5 3.9v2h4v-2c0-2.1-2.6-4-5-4z"/></svg>
+                <span class="friends-label">Amigos</span>
+                <span class="badge" id="friends-badge" hidden>0</span>
+            </button>
             <button class="pill-btn" id="online-btn">Jugar online</button>
             <button class="user-chip" id="profile-btn">
                 <span class="avatar" id="user-initial">?</span>
@@ -285,6 +290,40 @@
         </form>
     </dialog>
 
+    <!-- Amigos -->
+    <dialog class="sheet sheet-narrow" id="friends">
+        <form method="dialog">
+            <h2>Amigos</h2>
+            <p class="muted" id="friends-blocked" hidden></p>
+            <div id="friends-body">
+                <label class="search">
+                    <span class="sr-only">Buscar jugador</span>
+                    <input type="text" id="friend-search" placeholder="Buscar por nombre de usuario" autocomplete="off">
+                </label>
+                <ul class="people" id="friend-results"></ul>
+
+                <section id="incoming-section" hidden>
+                    <h3>Solicitudes</h3>
+                    <ul class="people" id="friend-incoming"></ul>
+                </section>
+
+                <section>
+                    <h3>Tus amigos <span class="muted" id="friends-count"></span></h3>
+                    <ul class="people" id="friend-list"></ul>
+                </section>
+
+                <section id="outgoing-section" hidden>
+                    <h3>Enviadas</h3>
+                    <ul class="people" id="friend-outgoing"></ul>
+                </section>
+            </div>
+            <div class="sheet-actions">
+                <button class="btn btn-primary" value="close">Cerrar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <div class="invites" id="invites" aria-live="polite"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -292,6 +331,7 @@
     <script src="../js/scene.js"></script>
     <script src="../js/engine.js"></script>
     <script src="../js/fx.js"></script>
+    <script src="../js/components/social.js"></script>
     <script src="../js/components/game.js"></script>
 </body>
 </html>

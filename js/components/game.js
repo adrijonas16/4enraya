@@ -345,6 +345,7 @@
             this.buildStatic();
             this.bind();
             this.loadUser();
+            this.social = new Social(this);
 
             // tablero de muestra mientras eliges
             this.state = E.createState({ rows: this.settings.rows, cols: this.settings.cols, map: 'classic', events: false });
@@ -530,6 +531,8 @@
             document.addEventListener('pointerdown', () => sound.ensure(), { once: true });
         }
 
+        sfx(name) { sound.play(name); }
+
         /* ---------- ayudas de turno ---------- */
 
         isHuman(color) {
@@ -571,6 +574,7 @@
             this.saved = false;
             this.view.setup(this.state);
             if (!sameSize) this.view.enter();
+            this.social && this.social.setPlaying(!!this.mp);
             this.updateUI();
             sound.play('select');
             if (this.state.map !== this.settings.map && this.settings.map === 'random' && !this.mp) {
@@ -1268,6 +1272,7 @@
             if (!silent && this.started && !this.state.over && !confirm('¿Salir de la sala? La partida en curso se cancelará.')) return;
             const mp = this.mp;
             this.mp = null;
+            this.social && this.social.setPlaying(false);
             mp.channels.forEach(ch => api.unsubscribe(ch));
             if (notify) api.leaveRoom(mp.room.room_code).catch(() => {});
             $('online-btn').classList.remove('live');
