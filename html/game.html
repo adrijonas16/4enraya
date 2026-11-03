@@ -3,19 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#173a40">
-    <title>4 en Raya Brutal</title>
+    <meta name="theme-color" content="#0b2029">
+    <title>4 en Raya</title>
     <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
     <link rel="stylesheet" href="../css/game.css">
 </head>
 <body>
+    <div class="scene" id="scene" aria-hidden="true">
+        <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
+        <div class="spot"></div>
+        <canvas></canvas>
+        <div class="grain"></div>
+        <div class="vignette"></div>
+        <div class="flash"></div>
+    </div>
     <canvas id="fx" class="fx" aria-hidden="true"></canvas>
 
     <header class="topbar">
-        <a class="wordmark" href="#" aria-label="4 en Raya Brutal">
+        <a class="wordmark" href="#" aria-label="4 en Raya, inicio">
             <span class="wordmark-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-            <span class="wordmark-text">4 en raya <b>brutal</b></span>
+            <span class="wordmark-text">4 en raya</span>
         </a>
         <nav class="topbar-actions" aria-label="Menú">
             <button class="icon-btn" id="help-btn" title="Cómo se juega" aria-label="Cómo se juega">?</button>
@@ -64,12 +72,14 @@
                         <div class="pieces" id="pieces"></div>
                         <div class="plate" aria-hidden="true"></div>
                         <div class="rims" aria-hidden="true"></div>
+                        <div class="glint" aria-hidden="true"></div>
                         <div class="overlay" id="overlay" aria-hidden="true"></div>
                         <svg class="winline" id="winline" aria-hidden="true"></svg>
                         <div class="hits" id="hits"></div>
                     </div>
                 </div>
                 <div class="feet" aria-hidden="true"><i></i><i></i></div>
+                <div class="floor" aria-hidden="true"></div>
 
                 <div class="hazard hidden" id="hazard" aria-hidden="true">
                     <div class="hazard-tape"></div>
@@ -257,6 +267,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/utils/api.js"></script>
+    <script src="../js/scene.js"></script>
     <script src="../js/engine.js"></script>
     <script src="../js/fx.js"></script>
     <script src="../js/components/game.js"></script>

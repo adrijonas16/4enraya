@@ -86,6 +86,10 @@
                 case 'lose':
                     [392, 330, 262].forEach((f, i) => this.tone(f, 0.3, { type: 'triangle', vol: 0.08, delay: i * 0.16 }));
                     break;
+                case 'drain':
+                    for (let i = 0; i < 14; i++) this.noise(0.05, { vol: 0.18, freq: 1400 + Math.random() * 1400, q: 4, delay: i * 0.045 + Math.random() * 0.02 });
+                    this.tone(140, 0.25, { type: 'triangle', vol: 0.1, slide: 70 });
+                    break;
                 case 'draw': this.tone(440, 0.25, { type: 'triangle', vol: 0.08 }); this.tone(440, 0.3, { type: 'triangle', vol: 0.08, delay: 0.2 }); break;
             }
         }
@@ -131,6 +135,17 @@
             }
             this.start();
         }
+        ring(x, y, color, size = 40) {
+            this.items.push({ x, y, vx: 0, vy: 0, r: size * .36, grow: size * .025, life: 1, decay: .07, color, g: 0, shape: 'ring' });
+            for (let i = 0; i < 8; i++) {
+                const a = Math.PI + (i / 7) * Math.PI;
+                this.items.push({
+                    x: x + Math.cos(a) * size * .4, y: y + size * .35, vx: Math.cos(a) * 1.6, vy: -Math.random() * 1.6,
+                    r: 1.5 + Math.random() * 1.5, life: 1, decay: .05, color: 'rgba(255,255,255,.8)', g: .08, shape: 'circle',
+                });
+            }
+            this.start();
+        }
         confetti(palette) {
             const n = this.reduced ? 40 : 160;
             for (let i = 0; i < n; i++) {
@@ -157,7 +172,11 @@
                     if (p.vr) p.rot += p.vr;
                     ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.4));
                     ctx.fillStyle = p.color;
-                    if (p.shape === 'circle') {
+                    if (p.shape === 'ring') {
+                        p.r += p.grow;
+                        ctx.strokeStyle = p.color; ctx.lineWidth = 3 * p.life;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.stroke();
+                    } else if (p.shape === 'circle') {
                         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
                     } else {
                         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);

@@ -3,13 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#173a40">
-    <title>4 en Raya Brutal</title>
+    <meta name="theme-color" content="#0b2029">
+    <title>4 en Raya</title>
     <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
     <link rel="stylesheet" href="../css/login.css">
 </head>
 <body>
+    <div class="scene" id="scene" aria-hidden="true">
+        <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
+        <div class="spot"></div>
+        <canvas></canvas>
+        <div class="grain"></div>
+        <div class="vignette"></div>
+        <div class="flash"></div>
+    </div>
     <main class="entry">
         <section class="hero" aria-labelledby="title">
             <div class="mini-board" aria-hidden="true">
@@ -27,11 +35,11 @@
                 </div>
                 <div class="mini-plate"></div>
             </div>
-            <h1 id="title">4 en raya<br>brutal</h1>
-            <p class="tagline">El clásico de siempre, con bombas, hielo y terremotos.</p>
+            <h1 id="title">4 en<br>raya</h1>
+            <p class="tagline">El clásico de siempre, ahora con poderes, hielo y terremotos.</p>
         </section>
 
-        <section class="panel" aria-label="Acceso">
+        <section class="panel glass" aria-label="Acceso">
             <div class="tabs" role="tablist">
                 <button class="tab active" role="tab" aria-selected="true" data-tab="login">Entrar</button>
                 <button class="tab" role="tab" aria-selected="false" data-tab="register">Crear cuenta</button>
@@ -77,6 +85,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/utils/api.js"></script>
+    <script src="../js/scene.js"></script>
     <script src="../js/components/login.js"></script>
+    <script>new Scene(document.getElementById('scene'));</script>
 </body>
 </html>

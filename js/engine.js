@@ -1,5 +1,5 @@
 /* ==========================================================
-   4 en Raya Brutal — motor del juego (lógica pura, sin DOM)
+   4 en Raya — motor del juego (lógica pura, sin DOM)
    ========================================================== */
 (function (global) {
     'use strict';

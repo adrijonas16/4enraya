@@ -1,5 +1,5 @@
 /* ==========================================================
-   4 en Raya Brutal — interfaz, animaciones y flujo de partida
+   4 en Raya — interfaz, animaciones y flujo de partida
    ========================================================== */
 (function () {
     'use strict';
@@ -54,6 +54,31 @@
             }
             this.layout();
             this.render(state, { animate: false });
+        }
+
+        // la palanca: todas las fichas caen por abajo
+        drain() {
+            let max = 0;
+            for (const [id, el] of this.els) {
+                const [r, c] = this.pos.get(id);
+                const delay = (this.rows - 1 - r) * 25 + Math.random() * 60;
+                const dur = 420 + Math.random() * 120;
+                const fall = (this.rows + 1.5) * this.pitch;
+                el.getAnimations().forEach(a => a.cancel());
+                el.animate([
+                    { transform: this.tf(r, c) },
+                    { transform: this.tf(r, c, fall) },
+                ], { duration: dur, delay, easing: 'cubic-bezier(.5,0,1,.6)', fill: 'forwards' });
+                max = Math.max(max, delay + dur);
+            }
+            this.winline.innerHTML = '';
+            return wait(max);
+        }
+
+        enter() {
+            const m = this.machine;
+            m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter');
+            setTimeout(() => m.classList.remove('enter'), 900);
         }
 
         layout() {
@@ -122,6 +147,8 @@
                                 this.machine.classList.remove('thump');
                                 void this.machine.offsetWidth;
                                 this.machine.classList.add('thump');
+                                const pt = this.point(r, c);
+                                window.fx.ring(pt.x, pt.y, cell.color === 'red' ? 'rgba(255,138,116,.9)' : 'rgba(255,229,138,.9)', this.pitch);
                                 onLand && onLand(r, c);
                             }, dur * 0.72);
                             maxDur = Math.max(maxDur, dur);
@@ -285,6 +312,7 @@
             if (!this.user) { location.href = 'login.html'; return; }
 
             window.fx = new Particles($('fx'));
+            this.scene = new Scene($('scene'));
             this.view = new BoardView();
             this.settings = this.loadSettings();
             this.score = { red: 0, yellow: 0 };
@@ -304,6 +332,7 @@
             // tablero de muestra mientras eliges
             this.state = E.createState({ rows: this.settings.rows, cols: this.settings.cols, map: 'classic', events: false });
             this.view.setup(this.state);
+            this.view.enter();
             this.updateUI();
             requestAnimationFrame(() => this.openSetup());
         }
@@ -473,14 +502,23 @@
 
         /* ---------- partida ---------- */
 
-        newGame(fromState = null) {
-            this.state = fromState || E.createState({ ...this.settings, starter: this.starter });
+        async newGame(fromState = null) {
+            const next = fromState || E.createState({ ...this.settings, starter: this.starter });
+            $('result').classList.add('hidden');
+            const sameSize = this.state && next.rows === this.state.rows && next.cols === this.state.cols;
+            if (this.started && this.view.els.size && !reduced) {
+                this.busy = true;
+                this.view.setGhost(null);
+                sound.play('drain');
+                await this.view.drain();
+            }
+            this.state = next;
             this.started = true;
             this.busy = false;
             this.armed = null;
             this.saved = false;
-            $('result').classList.add('hidden');
             this.view.setup(this.state);
+            if (!sameSize) this.view.enter();
             this.updateUI();
             sound.play('select');
             if (this.state.map !== this.settings.map && this.settings.map === 'random' && !this.mp) {
@@ -579,6 +617,7 @@
 
         async playEventEffects(id, info) {
             const v = this.view;
+            this.scene.storm(id);
             if (id === 'whirlwind') { sound.play('whoosh'); v.jolt('spin'); }
             if (id === 'quake') { sound.play('rumble'); v.jolt('shake'); navigator.vibrate?.([80, 40, 80, 40, 120]); }
             if (id === 'flipAll') { sound.play('whoosh'); v.jolt('flip'); }
@@ -743,10 +782,10 @@
                 sub = `Cuatro en raya en ${s.moves} tiradas.`;
                 discClass = w;
                 sound.play(twoLocal || human ? 'win' : 'lose');
-                if (twoLocal || human) setTimeout(() => window.fx.confetti(PALETTE[w].concat(['#f1ebdd'])), 300);
+                if (twoLocal || human) setTimeout(() => { window.fx.confetti(PALETTE[w].concat(['#f1ebdd'])); this.scene.celebrate(); }, 300);
                 navigator.vibrate?.([100, 50, 100, 50, 160]);
             } else if (s.result === 'double') {
-                title = 'Empate brutal';
+                title = 'Empate doble';
                 sub = 'El caos dejó cuatro en raya a los dos a la vez.';
                 discClass = 'both';
                 sound.play('draw');
@@ -770,7 +809,7 @@
 
         resultTitle() {
             const s = this.state;
-            if (s.result === 'double') return 'Empate brutal';
+            if (s.result === 'double') return 'Empate doble';
             if (s.result !== 'win') return 'Empate';
             if (!this.mp && this.settings.mode === 'pvp') return `Gana ${E.NAMES[s.winner]}`;
             if (this.isHuman(s.winner)) return 'Has ganado';
@@ -908,6 +947,7 @@
                 tk.title = ev.desc;
             }
 
+            this.scene.mood(!this.started ? null : s.over ? s.winner : s.turn);
             this.view.markTargets(s, this.armed === 'bomb' ? s.turn : null);
             this.updateGhost();
         }

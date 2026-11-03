@@ -1,6 +1,6 @@
-# 4 en Raya Brutal
+# 4 en Raya
 
-Conecta cuatro con poderes, eventos de caos, IA y partidas online.
+Conecta cuatro con poderes, eventos de caos, IA, partidas online y un fondo animado que reacciona al juego.
 
 ## Cómo abrirlo
 
@@ -38,6 +38,7 @@ css/game.css, login.css
 fonts/                  Archivo (variable, incluida en el repo)
 js/engine.js            reglas, física, eventos, poderes e IA (sin DOM)
 js/fx.js                sonido sintetizado y partículas
+js/scene.js             fondo animado (auroras, fichas flotando, destellos)
 js/components/game.js   interfaz, animaciones, flujo y online
 js/components/login.js
 js/utils/api.js         Supabase (el juego funciona aunque no cargue)
