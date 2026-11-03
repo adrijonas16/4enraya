@@ -2,8 +2,12 @@
     'use strict';
     const $ = id => document.getElementById(id);
 
+    // vuelta desde Google con error en la URL
+    const params = new URLSearchParams(location.search + '&' + location.hash.slice(1));
+    const oauthError = params.get('error_description');
+
     // si ya hay sesión, directo al juego
-    if (api.getCurrentUser()) { location.replace('game.html'); return; }
+    if (api.getCurrentUser() && !oauthError) { location.replace('game.html'); return; }
 
     function show(kind, msg) {
         $('login-error').textContent = kind === 'error' ? msg : '';
@@ -65,6 +69,37 @@
             show('error', err.message);
         } finally { busy(e.target, false); }
     });
+
+    const gbtn = $('google-btn');
+    const gLabel = gbtn.querySelector('span');
+    if (!api.online) {
+        gbtn.disabled = true;
+        gLabel.textContent = 'Google no disponible sin conexión';
+    }
+    gbtn.addEventListener('click', async () => {
+        gbtn.disabled = true;
+        gLabel.textContent = 'Abriendo Google…';
+        try { await api.loginWithGoogle(); }
+        catch (err) { show('error', err.message); gbtn.disabled = false; gLabel.textContent = 'Continuar con Google'; }
+    });
+
+    if (oauthError) {
+        show('error', /provider is not enabled/i.test(oauthError)
+            ? 'El inicio con Google aún no está activado en el servidor.'
+            : 'Google no pudo completar el inicio de sesión. Prueba otra vez.');
+        history.replaceState(null, '', location.pathname);
+    } else if (api.online) {
+        // ¿volvemos de Google con sesión?
+        gLabel.textContent = 'Comprobando sesión…';
+        gbtn.disabled = true;
+        api.finishOAuth().then(user => {
+            if (user) { location.replace('game.html'); return; }
+            gbtn.disabled = false; gLabel.textContent = 'Continuar con Google';
+        }).catch(err => {
+            show('error', err.message);
+            gbtn.disabled = false; gLabel.textContent = 'Continuar con Google';
+        });
+    }
 
     $('guest-btn').addEventListener('click', () => {
         api.loginAsGuest();

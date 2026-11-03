@@ -500,7 +500,7 @@
             $('profile-btn').onclick = () => this.openProfile();
             $('ranking-btn').onclick = () => this.openRanking();
             $('online-btn').onclick = () => this.openOnline();
-            $('logout-btn').onclick = () => { this.leaveRoom(true); api.logout(); location.href = 'login.html'; };
+            $('logout-btn').onclick = async () => { this.leaveRoom(true); await api.logout(); location.href = 'login.html'; };
             $('save-email-btn').onclick = () => this.saveEmail();
             $('create-room-btn').onclick = () => this.createRoom();
             $('join-room-btn').onclick = () => this.joinRoom();
@@ -879,7 +879,7 @@
             this.saved = true;
             if (won) {
                 this.user.total_wins = (this.user.total_wins || 0) + 1;
-                this.user.total_points = (this.user.total_points || 0) + 1;
+                this.user.total_points = (this.user.total_points || 0) + 10; // igual que increment_points en la base de datos
                 localStorage.setItem('user', JSON.stringify(this.user));
             }
             api.saveGame(this.user.username, s.map, won, opponent).catch(() => {});
@@ -1031,7 +1031,7 @@
             $('profile-wins').textContent = u.total_wins || 0;
             $('profile-points').textContent = u.total_points || 0;
             $('profile-email-input').value = u.email || '';
-            $('email-row').hidden = !!u.guest;
+            $('email-row').hidden = !!u.guest || !!u.google;
             $('guest-note').hidden = !u.guest;
             $('logout-btn').textContent = u.guest ? 'Salir y crear cuenta' : 'Cerrar sesión';
             $('profile').showModal();

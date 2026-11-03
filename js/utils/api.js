@@ -54,6 +54,29 @@ class API {
         return data;
     }
 
+    /* ---------- Google (Supabase Auth) ---------- */
+
+    async loginWithGoogle() {
+        const redirectTo = new URL('login.html', location.href).href;
+        const { error } = await this.db().auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo, queryParams: { prompt: 'select_account' } },
+        });
+        if (error) throw new Error('No se pudo abrir el inicio de sesión de Google');
+    }
+
+    // Al volver de Google: crea o recupera el jugador enlazado a esa cuenta
+    async finishOAuth() {
+        if (!this.supabase) return null;
+        const { data: { session } } = await this.supabase.auth.getSession();
+        if (!session) return null;
+        const { data, error } = await this.supabase.rpc('login_with_auth');
+        if (error || !data || !data.length) throw new Error('No se pudo entrar con Google');
+        const user = { ...data[0], google: true };
+        localStorage.setItem('user', JSON.stringify(user));
+        return user;
+    }
+
     loginAsGuest() {
         const guest = { id: null, username: 'Invitado', email: null, total_wins: 0, total_points: 0, guest: true };
         localStorage.setItem('user', JSON.stringify(guest));
@@ -68,7 +91,10 @@ class API {
         localStorage.setItem('user', JSON.stringify(user));
     }
 
-    logout() { localStorage.removeItem('user'); }
+    async logout() {
+        localStorage.removeItem('user');
+        try { if (this.supabase) await this.supabase.auth.signOut(); } catch (e) { /* nada */ }
+    }
 
     getCurrentUser() {
         try { return JSON.parse(localStorage.getItem('user')); }

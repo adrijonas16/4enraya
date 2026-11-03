@@ -12,7 +12,24 @@ npx serve .
 python3 -m http.server 8080
 ```
 
-Puedes entrar con tu cuenta o pulsar **Jugar como invitado** (juego local y contra la IA, sin ranking ni online).
+Puedes entrar con Google, con usuario y contraseña, o pulsar **Jugar como invitado** (juego local y contra la IA, sin ranking ni online).
+
+## Publicar en Vercel
+
+1. En [vercel.com/new](https://vercel.com/new) importa el repositorio `4enraya`.
+2. Deja todo por defecto (no hay que compilar nada; `vercel.json` ya lo indica) y pulsa **Deploy**.
+3. Cada `git push` a `main` vuelve a publicar solo.
+
+## Activar el inicio con Google
+
+La base de datos ya está preparada (columna `users.auth_id` y función `login_with_auth`). Falta configurar:
+
+1. **Google Cloud Console** → APIs y servicios → Credenciales → Crear ID de cliente OAuth (Aplicación web).
+   URI de redirección autorizada: `https://cyzjihoibpdabhiotjpf.supabase.co/auth/v1/callback`
+2. **Supabase** → Authentication → Sign In / Providers → Google: actívalo y pega el ID y el secreto de cliente.
+3. **Supabase** → Authentication → URL Configuration:
+   - Site URL: la dirección de Vercel (por ejemplo `https://4enraya.vercel.app`)
+   - Redirect URLs: añade `https://*.vercel.app/**` y `http://localhost:*/**`
 
 ## Reglas
 

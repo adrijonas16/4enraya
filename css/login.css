@@ -143,6 +143,15 @@
 }
 .pw-toggle:hover { color: var(--bone); background: rgba(241,235,221,.08); }
 
+.btn-google {
+    background: #fff;
+    color: #1f1f1f;
+    box-shadow: 0 4px 0 #c9c4b8, 0 8px 18px rgba(0,0,0,.25);
+    margin-bottom: 4px;
+}
+.btn-google:hover { background: #f4f4f4; }
+.btn-google:active { box-shadow: 0 2px 0 #c9c4b8; }
+.btn-google:disabled { opacity: .7; }
 .or { display: flex; align-items: center; gap: 10px; margin: 8px 0 14px; color: var(--bone-dim); font-size: var(--step--1); }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: rgba(241,235,221,.15); }
 .guest-note { margin-top: 10px; font-size: 12px; color: var(--bone-dim); line-height: 1.4; }
