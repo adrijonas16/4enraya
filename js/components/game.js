@@ -321,6 +321,100 @@
     }
 
     /* ==========================================================
+       Tablero de demostración de la portada: dos IA jugando solas
+       ========================================================== */
+    class DemoBoard {
+        constructor(root, layer) {
+            this.root = root;
+            this.layer = layer;
+            this.timer = null;
+            this.running = false;
+            this.els = new Map();
+            addEventListener('resize', () => this.place());
+        }
+        pitch() { return this.layer.clientWidth / 7 || 50; }
+        reset() {
+            this.layer.innerHTML = '';
+            this.els.clear();
+            this.s = E.createState({ rows: 6, cols: 7, map: 'classic', events: false, starter: Math.random() < 0.5 ? 'red' : 'yellow' });
+        }
+        start() {
+            if (this.running) return;
+            this.running = true;
+            if (!this.s) this.reset();
+            if (reduced) { this.fillStatic(); return; }
+            this.loop();
+        }
+        stop() { this.running = false; clearTimeout(this.timer); }
+        fillStatic() {
+            if (this.els.size) return;
+            [[5, 3, 'red'], [5, 2, 'yellow'], [4, 3, 'red'], [5, 4, 'yellow'], [3, 3, 'red'], [4, 2, 'yellow']].forEach(([r, c, color]) => {
+                this.s.cells[r][c] = { id: 'd' + r + c, color };
+            });
+            this.place();
+        }
+        place() {
+            const p = this.pitch();
+            for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) {
+                const cell = this.s && this.s.cells[r][c];
+                if (!cell) continue;
+                let el = this.els.get(cell.id);
+                if (!el) {
+                    el = document.createElement('div');
+                    el.className = 'piece ' + cell.color;
+                    this.layer.appendChild(el);
+                    this.els.set(cell.id, el);
+                }
+                el.style.transform = `translate(${c * p}px, ${r * p}px)`;
+            }
+        }
+        loop() {
+            if (!this.running) return;
+            const s = this.s;
+            if (s.over) {
+                // marca la línea, luego vacía el tablero
+                (s.winLine || []).forEach(line => line.forEach(([r, c]) => {
+                    const el = this.els.get(s.cells[r][c].id);
+                    el && el.classList.add('win');
+                }));
+                this.timer = setTimeout(() => {
+                    const p = this.pitch();
+                    let max = 0;
+                    for (const [id, el] of this.els) {
+                        const delay = Math.random() * 160;
+                        el.animate([{ transform: el.style.transform }, { transform: el.style.transform + ` translateY(${p * 7}px)` }],
+                            { duration: 520, delay, easing: 'cubic-bezier(.5,0,1,.6)', fill: 'forwards' });
+                        max = Math.max(max, delay + 520);
+                    }
+                    this.timer = setTimeout(() => { this.reset(); this.timer = setTimeout(() => this.loop(), 500); }, max);
+                }, 2200);
+                return;
+            }
+            const d = E.aiDecide(s, Math.random() < 0.5 ? 'easy' : 'normal');
+            if (!d || d.col == null) { s.over = true; this.loop(); return; }
+            const r = E.place(s, d.col, s.turn);
+            const cell = s.cells[r][d.col];
+            const p = this.pitch();
+            const el = document.createElement('div');
+            el.className = 'piece ' + cell.color;
+            this.layer.appendChild(el);
+            this.els.set(cell.id, el);
+            const to = `translate(${d.col * p}px, ${r * p}px)`;
+            el.style.transform = to;
+            const dur = 260 + Math.sqrt(r + 1) * 90;
+            el.animate([
+                { transform: `translate(${d.col * p}px, ${-p * 1.2}px)`, easing: 'cubic-bezier(.55,0,1,.45)' },
+                { transform: to, offset: 0.72, easing: 'ease-out' },
+                { transform: `translate(${d.col * p}px, ${r * p - p * 0.12}px)`, offset: 0.86, easing: 'ease-in' },
+                { transform: to },
+            ], { duration: dur });
+            s.moves++;
+            if (!E.resolve(s)) s.turn = E.other(s.turn);
+            this.timer = setTimeout(() => this.loop(), 520 + Math.random() * 260);
+        }
+    }
+
+    /* ==========================================================
        Aplicación
        ========================================================== */
     class App {
@@ -347,12 +441,24 @@
             this.loadUser();
             this.social = new Social(this);
 
+            // salas en tiempo real de la página publicada (si existen)
+            this.net = new RoomNet();
+            this.net.onLobby = peers => this.renderLobby(peers);
+            this.net.ready.then(() => {
+                if (this.net.available) this.net.lobby({ name: this.myName(), hosting: null, playing: false });
+                if ($('online').open) this.openOnline();
+                if (!$('home').hidden) $('online-sub').textContent = this.transport() ? 'Crea una sala y pásale el código' : 'Necesita una cuenta o la página publicada';
+            });
+            if (window.__ARTIFACT) document.documentElement.classList.add('in-artifact');
+
             // tablero de muestra mientras eliges
             this.state = E.createState({ rows: this.settings.rows, cols: this.settings.cols, map: 'classic', events: false });
             this.view.setup(this.state);
-            this.view.enter();
             this.updateUI();
-            requestAnimationFrame(() => this.openSetup());
+
+            this.demo = new DemoBoard($('demo'), $('demo-pieces'));
+            this.route();
+            addEventListener('hashchange', () => this.route());
         }
 
         /* ---------- ajustes ---------- */
@@ -397,6 +503,7 @@
         applySkin(id, animate) {
             const sk = SKINS.find(x => x.id === id) || SKINS[0];
             $('machine').dataset.skin = sk.id;
+            if ($('demo')) $('demo').dataset.skin = sk.id;
             $('skin-current-preview').dataset.skin = sk.id;
             $('skin-current-name').textContent = sk.name;
             document.querySelectorAll('.skin-tile').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.skinId === sk.id)));
@@ -447,6 +554,7 @@
 
             addEventListener('keydown', ev => {
                 if (document.querySelector('dialog[open]')) return;
+                if ($('arena').hidden) return;
                 if (ev.target.matches('input')) return;
                 const k = ev.key;
                 if (k === 'ArrowLeft' || k === 'ArrowRight') {
@@ -488,6 +596,12 @@
 
             // botones
             $('settings-btn').onclick = () => this.openSetup();
+            document.querySelectorAll('[data-play]').forEach(b => { b.onclick = () => this.quickPlay(b.dataset.play); });
+            $('home-continue').onclick = () => this.showGame();
+            $('home-help').onclick = () => $('help').showModal();
+            $('home-skins').onclick = () => this.openSkins();
+            $('home-link').onclick = ev => { ev.preventDefault(); this.showHome(); };
+            $('nick-input').addEventListener('change', () => this.saveNick());
             $('skin-btn').onclick = () => this.openSkins();
             $('skin-open').onclick = () => this.openSkins();
             $('skin-list').addEventListener('click', ev => {
@@ -526,12 +640,59 @@
                 if (this.mp) this.leaveRoom(true);
                 this.score = { red: 0, yellow: 0 };
                 this.starter = 'red';
+                this.showGame();
                 this.newGame();
             });
             document.addEventListener('pointerdown', () => sound.ensure(), { once: true });
         }
 
         sfx(name) { sound.play(name); }
+
+        /* ---------- inicio / juego ---------- */
+
+        route() {
+            if (location.hash === '#jugar' && this.started) this.showGame();
+            else this.showHome();
+        }
+
+        showHome() {
+            $('home').hidden = false;
+            $('arena').hidden = true;
+            if (location.hash === '#jugar') location.hash = 'inicio';
+            const midGame = this.started && !this.state.over;
+            $('home-continue').hidden = !midGame;
+            $('home-hello').textContent = this.user.guest ? 'Hola' : `Hola, ${this.user.username}`;
+            document.querySelectorAll('.chip[data-play]').forEach(c => c.classList.toggle('remembered', this.settings.mode === 'ai' && c.dataset.play === this.settings.level));
+            const t = this.transport();
+            $('online-sub').textContent = t ? 'Crea una sala y pásale el código' : 'Necesita una cuenta o la página publicada';
+            this.view.setGhost(null);
+            this.demo.start();
+        }
+
+        showGame() {
+            this.demo.stop();
+            $('home').hidden = true;
+            const wasHidden = $('arena').hidden;
+            $('arena').hidden = false;
+            if (location.hash !== '#jugar') location.hash = 'jugar';
+            if (wasHidden) {
+                this.view.layout();
+                this.view.enter();
+                if (this.state.over) this.view.markWin(this.state.winLine);
+            }
+        }
+
+        quickPlay(kind) {
+            if (kind === 'online') { this.openOnline(); return; }
+            if (this.mp) this.leaveRoom(true, true, false);
+            this.settings.mode = kind === 'pvp' ? 'pvp' : 'ai';
+            if (kind !== 'pvp') this.settings.level = kind;
+            this.saveSettings();
+            this.score = { red: 0, yellow: 0 };
+            this.starter = 'red';
+            this.showGame();
+            this.newGame();
+        }
 
         /* ---------- ayudas de turno ---------- */
 
@@ -590,7 +751,8 @@
                 const s = E.createState({ ...this.mp.settings, starter: this.starter });
                 s.seq = this.state.seq + 1;
                 this.newGame(s);
-                api.resetGame(this.mp.gameId, s).catch(() => this.toast('No se pudo empezar la revancha', true));
+                if (this.mp.net) this.mp.net.send(s).catch(() => {});
+                else api.resetGame(this.mp.gameId, s).catch(() => this.toast('No se pudo empezar la revancha', true));
                 return;
             }
             this.starter = E.other(this.starter);
@@ -1082,23 +1244,231 @@
            Online (Supabase)
            ========================================================== */
 
+        // 'db' = Supabase con cuenta, 'room' = salas de la página publicada
+        transport() {
+            if (this.mp) return this.mp.net !== undefined ? 'room' : 'db';
+            if (!this.user.guest && this.user.id && api.online) return 'db';
+            if (this.net && this.net.available) return 'room';
+            return null;
+        }
+
+        myName() {
+            let n = '';
+            try { n = localStorage.getItem('4r-nick') || ''; } catch (e) { /* */ }
+            return (n || (this.user.guest ? 'Invitado' : this.user.username) || 'Invitado').slice(0, 15);
+        }
+
         openOnline() {
             $('mp-error').textContent = '';
             const inRoom = !!this.mp;
             $('mp-home').hidden = inRoom;
             $('mp-room').hidden = !inRoom;
-            if (this.user.guest) {
-                $('mp-error').textContent = 'Necesitas una cuenta para jugar online. Sal desde tu perfil y crea una.';
-            } else if (!api.online) {
-                $('mp-error').textContent = 'No hay conexión con el servidor de partidas.';
+            const t = this.transport();
+            $('nick-row').hidden = t !== 'room' || inRoom;
+            $('nick-input').value = this.myName();
+            $('lobby').hidden = t !== 'room' || inRoom;
+            if (t === 'room') this.renderLobby(this.net.lobbyPeers);
+            if (!t) {
+                $('mp-error').textContent = this.user.guest
+                    ? 'Para jugar online necesitas una cuenta, o abrir el juego desde su página publicada.'
+                    : 'No hay conexión con el servidor de partidas.';
             }
-            $('online').showModal();
+            if (!$('online').open) $('online').showModal();
         }
 
         mpGuard() {
-            if (this.user.guest) { $('mp-error').textContent = 'Necesitas una cuenta para jugar online.'; return false; }
-            if (!api.online) { $('mp-error').textContent = 'No hay conexión con el servidor de partidas.'; return false; }
-            return true;
+            if (this.transport()) return true;
+            $('mp-error').textContent = this.user.guest
+                ? 'Para jugar online necesitas una cuenta.'
+                : 'No hay conexión con el servidor de partidas.';
+            return false;
+        }
+
+        /* ---------- online por salas en tiempo real ---------- */
+
+        renderLobby(peers) {
+            const list = $('lobby-list');
+            if (!list) return;
+            list.innerHTML = '';
+            const people = (peers || []).filter(p => p.presence && p.presence.name);
+            $('lobby-empty').hidden = people.length > 0;
+            people.slice(0, 12).forEach(p => {
+                const pr = p.presence;
+                const li = document.createElement('li');
+                li.className = 'person';
+                const av = document.createElement('span');
+                av.className = 'avatar';
+                av.textContent = String(pr.name)[0].toUpperCase();
+                const dot = document.createElement('i');
+                dot.className = 'presence ' + (pr.playing ? 'playing' : 'online');
+                av.appendChild(dot);
+                const info = document.createElement('span');
+                info.className = 'person-info';
+                const b = document.createElement('b'); b.textContent = String(pr.name).slice(0, 20);
+                const sm = document.createElement('small');
+                sm.textContent = pr.playing ? 'Jugando' : pr.hosting ? 'Esperando rival en su sala' : 'En el inicio';
+                info.append(b, sm);
+                li.append(av, info);
+                if (pr.hosting && !pr.playing && /^[A-Z0-9]{6}$/.test(pr.hosting) && !this.mp) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-primary btn-small';
+                    btn.textContent = 'Unirme';
+                    btn.onclick = () => { $('join-code-input').value = pr.hosting; this.joinRoom(); };
+                    li.appendChild(btn);
+                }
+                list.appendChild(li);
+            });
+        }
+
+        saveNick() {
+            const v = $('nick-input').value.trim().slice(0, 15);
+            try { localStorage.setItem('4r-nick', v); } catch (e) { /* */ }
+            if (this.net.available) this.net.lobby({ name: this.myName() });
+        }
+
+        async createRoomNet() {
+            this.saveNick();
+            const name = this.myName();
+            const code = api.generateRoomCode();
+            this.mp = {
+                net: null, room: { room_code: code }, isHost: true, myColor: 'red', gameId: null, channels: [],
+                names: { red: name, yellow: null }, settings: { ...this.settings, mode: 'pvp' },
+            };
+            $('room-code').textContent = code;
+            $('mp-home').hidden = true; $('mp-room').hidden = false;
+            $('nick-row').hidden = true; $('lobby').hidden = true;
+            this.setMpStatus('Abriendo sala<span class="dots"></span>');
+            try {
+                this.mp.net = await this.net.join(code, { role: 'host', name }, {
+                    onPeers: peers => this.onNetPeers(peers),
+                    onState: st => this.onNetState(st),
+                    onLost: () => this.netLost(),
+                });
+                this.setMpStatus('Pásale el código a tu rival. Esperando a que entre<span class="dots"></span>');
+                this.net.lobby({ name, hosting: code, playing: false });
+                $('online-btn').classList.add('live');
+                $('online-btn').textContent = 'Sala ' + code;
+            } catch (e) {
+                this.mp = null;
+                $('mp-home').hidden = false; $('mp-room').hidden = true;
+                $('mp-error').textContent = 'No se pudo abrir la sala. Inténtalo otra vez.';
+            }
+        }
+
+        async joinRoomNet(code) {
+            this.saveNick();
+            const name = this.myName();
+            this.mp = {
+                net: null, room: { room_code: code }, isHost: false, myColor: 'yellow', gameId: null, channels: [],
+                names: { red: 'Rival', yellow: name },
+            };
+            $('room-code').textContent = code;
+            $('mp-home').hidden = true; $('mp-room').hidden = false;
+            $('nick-row').hidden = true; $('lobby').hidden = true;
+            this.setMpStatus('Entrando en la sala<span class="dots"></span>');
+            try {
+                this.mp.net = await this.net.join(code, { role: 'guest', name }, {
+                    onPeers: peers => this.onNetPeers(peers),
+                    onState: st => this.onNetState(st),
+                    onLost: () => this.netLost(),
+                });
+                $('online-btn').classList.add('live');
+                $('online-btn').textContent = 'Sala ' + code;
+                this.setMpStatus('Buscando al anfitrión<span class="dots"></span>');
+                const mp = this.mp;
+                setTimeout(() => {
+                    if (this.mp === mp && !mp.gameId && !mp.hadRival) {
+                        this.leaveRoom(true);
+                        this.openOnline();
+                        $('mp-error').textContent = `No hay nadie en la sala ${code}. Revisa el código.`;
+                    }
+                }, 12000);
+            } catch (e) {
+                this.mp = null;
+                $('mp-home').hidden = false; $('mp-room').hidden = true;
+                $('mp-error').textContent = 'No se pudo entrar en la sala. Inténtalo otra vez.';
+            }
+        }
+
+        onNetPeers(peers) {
+            const mp = this.mp;
+            if (!mp || !mp.net) return;
+            const want = mp.isHost ? 'guest' : 'host';
+            const candidates = peers.filter(p => p.presence.role === want);
+            let rival = mp.rivalPeer ? candidates.find(p => p.peer === mp.rivalPeer) : null;
+            if (!rival && !mp.gameId) rival = candidates[0];
+
+            // la sala ya tiene pareja y no soy yo
+            if (!mp.isHost && rival && rival.presence.opp && rival.presence.opp !== mp.net.myPeer) {
+                this.leaveRoom(true);
+                this.openOnline();
+                $('mp-error').textContent = 'Esa sala ya está jugando una partida.';
+                return;
+            }
+
+            if (rival) {
+                mp.hadRival = true;
+                mp.rivalPeer = rival.peer;
+                mp.names[mp.isHost ? 'yellow' : 'red'] = String(rival.presence.name || 'Rival').slice(0, 20);
+                clearTimeout(mp.goneTimer);
+                mp.goneTimer = null;
+                if (!mp.isHost && !mp.gameId) this.setMpStatus(`Conectado con ${mp.names.red}. Empezando<span class="dots"></span>`, true);
+            }
+
+            if (mp.isHost && rival && !mp.gameId) {
+                mp.gameId = 'net';
+                this.setMpStatus(`${mp.names.yellow} ha entrado. ¡A jugar!`, true);
+                mp.net.set({ opp: rival.peer }).catch(() => {});
+                this.net.lobby({ hosting: null, playing: true });
+                const s = E.createState({ ...mp.settings, starter: 'red' });
+                s.seq = 1;
+                this.score = { red: 0, yellow: 0 };
+                this.starter = 'red';
+                setTimeout(() => {
+                    if (this.mp !== mp) return;
+                    if ($('online').open) $('online').close();
+                    this.showGame();
+                    this.newGame(s);
+                    mp.net.send(s).catch(() => {});
+                    this.toast(`Juegas con rojas contra ${mp.names.yellow}`);
+                }, 500);
+            }
+
+            if (mp.hadRival && !rival && !mp.goneTimer) {
+                // margen por si es una reconexión breve
+                mp.goneTimer = setTimeout(() => {
+                    if (this.mp !== mp) return;
+                    const back = mp.net.peers().some(p => p.peer === mp.rivalPeer);
+                    if (back) return;
+                    this.toast('Tu rival ha salido de la sala', true);
+                    this.leaveRoom(true);
+                }, 5000);
+            }
+            if (this.started) this.updateUI();
+        }
+
+        onNetState(st) {
+            const mp = this.mp;
+            if (!mp) return;
+            if (!mp.gameId) {
+                if (mp.isHost) return;
+                mp.gameId = 'net';
+                this.net.lobby({ hosting: null, playing: true });
+                this.score = { red: 0, yellow: 0 };
+                if ($('online').open) $('online').close();
+                this.showGame();
+                this.newGame(st);
+                this.toast(`Juegas con amarillas contra ${mp.names.red}`);
+                return;
+            }
+            this.onGameUpdate({ board_state: st });
+        }
+
+        netLost() {
+            if (!this.mp) return;
+            this.toast('Se perdió la conexión con la sala', true);
+            this.leaveRoom(true);
         }
 
         setMpStatus(html, ok = false) {
@@ -1109,6 +1479,7 @@
 
         async createRoom() {
             if (!this.mpGuard()) return;
+            if (this.transport() === 'room') return this.createRoomNet();
             $('mp-error').textContent = '';
             try {
                 const room = await api.createRoom(this.user.id, this.user.username);
@@ -1131,8 +1502,10 @@
         async joinRoom() {
             if (!this.mpGuard()) return;
             const code = $('join-code-input').value.trim().toUpperCase();
-            if (code.length !== 6) { $('mp-error').textContent = 'El código tiene 6 caracteres'; return; }
+            if (!/^[A-Z0-9]{6}$/.test(code)) { $('mp-error').textContent = 'El código tiene 6 letras o números'; return; }
             $('mp-error').textContent = '';
+            if (this.mp) this.leaveRoom(true, true, false);
+            if (this.transport() === 'room') return this.joinRoomNet(code);
             try {
                 const room = await api.joinRoom(code, this.user.id, this.user.username);
                 this.mp = {
@@ -1159,8 +1532,9 @@
                 const st = this.parseState(game.board_state);
                 if (!st) throw new Error('La partida del anfitrión usa una versión antigua del juego');
                 this.score = { red: 0, yellow: 0 };
-                this.newGame(st);
                 $('online').close();
+                this.showGame();
+                this.newGame(st);
                 this.toast(`Juegas con amarillas contra ${room.host_name}`);
             } catch (e) {
                 $('mp-error').textContent = e.message || 'No se pudo entrar en la sala';
@@ -1188,6 +1562,7 @@
                     this.starter = 'red';
                     await wait(600);
                     $('online').open && $('online').close();
+                    this.showGame();
                     this.newGame(s);
                     this.toast(`Juegas con rojas contra ${room.guest_name}`);
                 } catch (e) {
@@ -1256,6 +1631,10 @@
         push() {
             if (!this.mp || !this.mp.gameId) return;
             const s = this.state;
+            if (this.mp.net) {
+                this.mp.net.send(s).catch(() => this.toast('No se pudo enviar la jugada', true));
+                return;
+            }
             const p = s.over
                 ? api.finishGame(this.mp.gameId, s.winner, s)
                 : api.updateGame(this.mp.gameId, s);
@@ -1267,20 +1646,25 @@
             navigator.clipboard?.writeText(code).then(() => this.toast('Código copiado'), () => this.toast(code));
         }
 
-        async leaveRoom(silent = false, notify = true) {
+        async leaveRoom(silent = false, notify = true, restart = true) {
             if (!this.mp) return;
-            if (!silent && this.started && !this.state.over && !confirm('¿Salir de la sala? La partida en curso se cancelará.')) return;
             const mp = this.mp;
             this.mp = null;
+            clearTimeout(mp.goneTimer);
             this.social && this.social.setPlaying(false);
-            mp.channels.forEach(ch => api.unsubscribe(ch));
-            if (notify) api.leaveRoom(mp.room.room_code).catch(() => {});
+            if (mp.net) {
+                mp.net.leave();
+                this.net.lobby({ hosting: null, playing: false });
+            } else {
+                mp.channels.forEach(ch => api.unsubscribe(ch));
+                if (notify) api.leaveRoom(mp.room.room_code).catch(() => {});
+            }
             $('online-btn').classList.remove('live');
             $('online-btn').textContent = 'Jugar online';
             $('mp-home').hidden = false; $('mp-room').hidden = true;
             $('join-code-input').value = '';
             if ($('online').open) $('online').close();
-            if (this.started) { this.score = { red: 0, yellow: 0 }; this.newGame(); }
+            if (this.started && restart) { this.score = { red: 0, yellow: 0 }; this.newGame(); }
         }
     }
 

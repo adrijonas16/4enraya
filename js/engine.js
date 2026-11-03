@@ -35,7 +35,7 @@
     };
 
     let uid = 1;
-    const nextId = () => 'p' + (uid++) + Math.random().toString(36).slice(2, 6);
+    const nextId = () => (uid++).toString(36) + Math.random().toString(36).slice(2, 4);
 
     const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
     const pick = arr => arr[Math.floor(Math.random() * arr.length)];

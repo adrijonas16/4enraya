@@ -67,7 +67,18 @@ js/components/social.js amigos, presencia y retos
 js/utils/api.js         Supabase (el juego funciona aunque no cargue)
 ```
 
-## Online (Supabase)
+## Página de inicio
+
+Al abrir el juego aparece la portada, con un tablero de demostración donde dos IA juegan solas. Desde ahí se empieza contra la IA (con la dificultad en un toque), a dos jugadores o online. `#jugar` lleva a la partida y `#inicio` a la portada.
+
+## Online
+
+Hay dos formas de jugar online, y el juego elige sola:
+
+- **Con cuenta (Supabase):** salas guardadas en la base de datos, amigos y retos. Es la de la versión publicada en Vercel.
+- **Página publicada en Claude:** usa las salas en tiempo real de la página (`js/net.js`), sin base de datos. Muestra quién está en la página en ese momento y se puede unir a su sala con un toque. El estado de la partida viaja comprimido en la presencia de cada jugador, así que si alguien se reconecta recupera la última jugada.
+
+### Supabase
 
 Usa las tablas `users`, `rooms`, `games`, `game_history`, `rankings`, `friendships`, `game_invites` y las funciones `increment_wins` / `increment_points`.
 El estado completo de la partida (fichas, hielo, cargas, eventos) se guarda en `games.board_state` como JSON con `v: 2`, así ambos jugadores ven exactamente lo mismo. Las partidas guardadas con la versión anterior no son compatibles.

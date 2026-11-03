@@ -22,7 +22,7 @@
     <canvas id="fx" class="fx" aria-hidden="true"></canvas>
 
     <header class="topbar">
-        <a class="wordmark" href="#" aria-label="4 en Raya, inicio">
+        <a class="wordmark" href="#" id="home-link" aria-label="4 en Raya, inicio">
             <span class="wordmark-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <span class="wordmark-text">4 en raya</span>
         </a>
@@ -47,7 +47,52 @@
         </nav>
     </header>
 
-    <main class="arena" id="arena">
+    <!-- Inicio -->
+    <section class="home" id="home" aria-labelledby="home-title">
+        <div class="home-copy">
+            <p class="home-hello" id="home-hello"></p>
+            <h1 class="home-title" id="home-title">4 en raya</h1>
+            <p class="home-tag">El clásico de siempre, con poderes, hielo, terremotos y siete tableros para elegir.</p>
+
+            <div class="modes">
+                <div class="mode mode-ai">
+                    <span class="mode-art" aria-hidden="true"><i class="disc red"></i><i class="disc yellow"></i></span>
+                    <span class="mode-text"><b>Contra la IA</b><small>Elige la dificultad y empieza</small></span>
+                    <span class="mode-levels">
+                        <button type="button" class="chip" data-play="easy">Fácil</button>
+                        <button type="button" class="chip" data-play="normal">Normal</button>
+                        <button type="button" class="chip" data-play="hard">Difícil</button>
+                    </span>
+                </div>
+                <button type="button" class="mode" data-play="pvp">
+                    <span class="mode-art" aria-hidden="true"><i class="disc yellow"></i><i class="disc red"></i></span>
+                    <span class="mode-text"><b>Dos jugadores aquí</b><small>En el mismo dispositivo, por turnos</small></span>
+                    <span class="mode-go" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="mode mode-online" data-play="online">
+                    <span class="mode-art" aria-hidden="true"><i class="disc yellow"></i><i class="disc yellow"></i></span>
+                    <span class="mode-text"><b>Online con un amigo</b><small id="online-sub">Crea una sala y pásale el código</small></span>
+                    <span class="mode-go" aria-hidden="true"></span>
+                </button>
+            </div>
+
+            <div class="home-links">
+                <button type="button" class="btn btn-primary btn-small" id="home-continue" hidden>Continuar partida</button>
+                <button type="button" class="link-btn" id="home-help">Cómo se juega</button>
+                <button type="button" class="link-btn" id="home-skins">Estilo del tablero</button>
+            </div>
+        </div>
+
+        <div class="home-demo" aria-hidden="true">
+            <div class="machine demo-machine" id="demo" data-skin="clasico">
+                <div class="frame"><div class="grid"><div class="pieces" id="demo-pieces"></div><div class="plate"></div><div class="rims"></div><div class="glint"></div></div></div>
+                <div class="feet"><i></i><i></i></div>
+                <div class="floor"></div>
+            </div>
+        </div>
+    </section>
+
+    <main class="arena" id="arena" hidden>
         <!-- Placa del jugador rojo -->
         <section class="plaque" data-color="red" id="plaque-red" aria-label="Jugador rojo">
             <div class="plaque-head">
@@ -267,6 +312,10 @@
             <h2>Jugar online</h2>
             <div id="mp-home">
                 <p class="muted">Crea una sala y pásale el código a tu rival. La partida usa tus ajustes actuales de tablero y mapa.</p>
+                <label class="field" id="nick-row" hidden>
+                    <span>Tu nombre en la partida</span>
+                    <input type="text" id="nick-input" maxlength="15" autocomplete="nickname">
+                </label>
                 <button type="button" class="btn btn-primary btn-block" id="create-room-btn">Crear sala</button>
                 <div class="or"><span>o únete con un código</span></div>
                 <div class="field-row">
@@ -274,6 +323,11 @@
                     <button type="button" class="btn btn-ghost" id="join-room-btn">Unirme</button>
                 </div>
             </div>
+            <section id="lobby" hidden>
+                <h3>Ahora en esta página</h3>
+                <p class="muted small" id="lobby-empty">No hay nadie más ahora mismo. Cuando tu amigo abra el juego, aparecerá aquí.</p>
+                <ul class="people" id="lobby-list"></ul>
+            </section>
             <div id="mp-room" hidden>
                 <p class="muted">Código de la sala</p>
                 <button type="button" class="room-code" id="copy-code-btn" title="Copiar código">
@@ -331,6 +385,7 @@
     <script src="../js/scene.js"></script>
     <script src="../js/engine.js"></script>
     <script src="../js/fx.js"></script>
+    <script src="../js/net.js"></script>
     <script src="../js/components/social.js"></script>
     <script src="../js/components/game.js"></script>
 </body>
