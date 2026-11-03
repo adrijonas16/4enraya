@@ -2,152 +2,336 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>4 en Raya Brutal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0b2029">
+    <title>4 en Raya</title>
+    <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
-    <link rel="stylesheet" href="../css/modal.css">
-    <link rel="stylesheet" href="../css/profile.css">
-    <link rel="stylesheet" href="../css/ranking.css">
-    <link rel="stylesheet" href="../css/multiplayer.css">
     <link rel="stylesheet" href="../css/game.css">
+    <link rel="stylesheet" href="../css/skins.css">
 </head>
 <body>
-    <div id="game-screen" class="screen active">
-        <header class="header">
-            <button id="profile-btn" class="profile-btn">
-                <span>👤</span>
-                <span id="user-name">Usuario</span>
-                <span id="user-points" class="points">0 pts</span>
+    <div class="scene" id="scene" aria-hidden="true">
+        <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
+        <div class="spot"></div>
+        <canvas></canvas>
+        <div class="grain"></div>
+        <div class="vignette"></div>
+        <div class="flash"></div>
+    </div>
+    <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+        <a class="wordmark" href="#" aria-label="4 en Raya, inicio">
+            <span class="wordmark-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="wordmark-text">4 en raya</span>
+        </a>
+        <nav class="topbar-actions" aria-label="Menú">
+            <button class="icon-btn" id="help-btn" title="Cómo se juega" aria-label="Cómo se juega">?</button>
+            <button class="icon-btn" id="sound-btn" title="Sonido" aria-label="Sonido" aria-pressed="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </button>
-            <div class="header-actions">
-                <button id="ranking-btn" class="btn-icon">🏆</button>
-                <button id="multiplayer-btn" class="btn-icon">🎮</button>
-            </div>
-        </header>
+            <button class="icon-btn" id="ranking-btn" title="Ranking" aria-label="Ranking">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M3 20h18v-2H3zM5 17h3v-6H5zm5.5 0h3V5h-3zM16 17h3V9h-3z"/></svg>
+            </button>
+            <button class="pill-btn friends-btn" id="friends-btn" aria-label="Amigos">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-7 1.7-7 4v2h14v-2c0-2.3-3.7-4-7-4zm7.5-2.2a3.3 3.3 0 1 0 0-6.6 3.3 3.3 0 0 0 0 6.6zM17 13c-.5 0-1 0-1.5.1 1.5 1 2.5 2.3 2.5 3.9v2h4v-2c0-2.1-2.6-4-5-4z"/></svg>
+                <span class="friends-label">Amigos</span>
+                <span class="badge" id="friends-badge" hidden>0</span>
+            </button>
+            <button class="pill-btn" id="online-btn">Jugar online</button>
+            <button class="user-chip" id="profile-btn">
+                <span class="avatar" id="user-initial">?</span>
+                <span id="user-name">Usuario</span>
+            </button>
+        </nav>
+    </header>
 
-        <div class="game-controls">
-            <select id="modeSelect">
-                <option value="">Modo ▼</option>
-                <option value="pvp">2 Jugadores</option>
-                <option value="ai">Vs IA</option>
-            </select>
-            <select id="rowsSelect">
-                <option value="6">6F</option>
-                <option value="7">7F</option>
-                <option value="8" selected>8F</option>
-                <option value="9">9F</option>
-            </select>
-            <select id="colsSelect">
-                <option value="7">7C</option>
-                <option value="8">8C</option>
-                <option value="9" selected>9C</option>
-                <option value="10">10C</option>
-            </select>
-            <select id="mapSelect">
-                <option value="classic">Clásico</option>
-                <option value="obstacles">🧱 Obstáculos</option>
-                <option value="chaos">🌪 Caos</option>
-                <option value="frozen">❄️ Congelado</option>
-                <option value="random">🎲 Aleatorio</option>
-            </select>
-            <button id="newGameBtn" class="btn-play">▶ Jugar</button>
-        </div>
-
-        <p id="mode-hint" class="mode-hint">Selecciona un modo para jugar</p>
-
-        <div id="mp-info" class="mp-info hidden">
-            <span class="mp-player red"><span class="dot"></span><span id="player-red-name">Rojo</span></span>
-            <span class="vs">VS</span>
-            <span class="mp-player yellow"><span class="dot"></span><span id="player-yellow-name">Amarillo</span></span>
-        </div>
-
-        <div class="game-info">
-            <span id="turnText">Turno: Rojo</span>
-            <span id="connectInfo">Conecta <b id="connectCount">4</b></span>
-        </div>
-
-        <div class="board-container">
-            <div id="announcement" class="announcement hidden"></div>
-            <div id="board" class="board disabled"></div>
-        </div>
-
-        <div class="powers-bar">
-            <span id="playerPoints" class="power-points">0 pts</span>
-            <button class="power-btn" data-power="bomb">💣</button>
-            <button class="power-btn" data-power="columnShift">🌊</button>
-            <button class="power-btn" data-power="freeze">❄️</button>
-            <button class="power-btn" data-power="doubleDrop">⚡</button>
-        </div>
-
-        <div class="legend">
-            <span class="chip red">Rojo</span>
-            <span class="chip yellow">Amarillo</span>
-        </div>
-    </div>
-
-    <div id="profile-modal" class="modal hidden">
-        <div class="modal-card">
-            <button class="modal-close">&times;</button>
-            <div class="profile-avatar">👤</div>
-            <h2 id="profile-name" class="profile-name">Usuario</h2>
-            <p id="profile-email" class="profile-email">Sin email</p>
-
-            <div class="profile-form">
-                <input type="email" id="profile-email-input" placeholder="Tu email">
-                <button id="save-email-btn" class="btn-secondary">Guardar</button>
-            </div>
-
-            <div class="profile-stats">
-                <div class="stat-box">
-                    <strong id="profile-wins">0</strong>
-                    <span>Victorias</span>
+    <main class="arena" id="arena">
+        <!-- Placa del jugador rojo -->
+        <section class="plaque" data-color="red" id="plaque-red" aria-label="Jugador rojo">
+            <div class="plaque-head">
+                <span class="disc red" aria-hidden="true"></span>
+                <div class="plaque-id">
+                    <strong class="plaque-name" data-name>Rojo</strong>
+                    <span class="plaque-role" data-role>Jugador 1</span>
                 </div>
-                <div class="stat-box">
-                    <strong id="profile-points">0</strong>
-                    <span>Puntos</span>
+                <span class="plaque-score" data-score title="Partidas ganadas en esta sesión">0</span>
+            </div>
+            <div class="charge" data-charge aria-label="Cargas"></div>
+            <div class="powers" data-powers></div>
+        </section>
+
+        <!-- Tablero -->
+        <section class="stage" aria-label="Tablero">
+            <div class="status" id="status" role="status" aria-live="polite">
+                <span class="status-disc" id="status-disc"></span>
+                <span id="status-text">Elige cómo quieres jugar</span>
+            </div>
+
+            <div class="machine" id="machine" data-skin="clasico">
+                <div class="rail" id="rail" aria-hidden="true">
+                    <div class="ghost" id="ghost"></div>
+                </div>
+                <div class="frame" id="frame">
+                    <div class="grid" id="grid">
+                        <div class="pieces" id="pieces"></div>
+                        <div class="plate" aria-hidden="true"></div>
+                        <div class="rims" aria-hidden="true"></div>
+                        <div class="glint" aria-hidden="true"></div>
+                        <div class="overlay" id="overlay" aria-hidden="true"></div>
+                        <svg class="winline" id="winline" aria-hidden="true"></svg>
+                        <div class="hits" id="hits"></div>
+                    </div>
+                </div>
+                <div class="feet" aria-hidden="true"><i></i><i></i></div>
+                <div class="floor" aria-hidden="true"></div>
+
+                <div class="hazard hidden" id="hazard" aria-hidden="true">
+                    <div class="hazard-tape"></div>
+                    <div class="hazard-card">
+                        <span class="hazard-icon" id="hazard-icon"></span>
+                        <div>
+                            <strong id="hazard-name"></strong>
+                            <span id="hazard-desc"></span>
+                        </div>
+                    </div>
+                    <div class="hazard-tape"></div>
+                </div>
+
+                <div class="result hidden" id="result" role="dialog" aria-labelledby="result-title">
+                    <div class="result-card">
+                        <span class="result-disc" id="result-disc"></span>
+                        <h2 id="result-title">Gana Rojo</h2>
+                        <p id="result-sub"></p>
+                        <div class="result-actions">
+                            <button class="btn btn-primary" id="rematch-btn">Revancha</button>
+                            <button class="btn btn-ghost" id="settings-btn-2">Cambiar ajustes</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <button id="logout-btn" class="btn-danger">Cerrar Sesión</button>
-        </div>
-    </div>
-
-    <div id="ranking-modal" class="modal hidden">
-        <div class="modal-card ranking-card">
-            <button class="modal-close">&times;</button>
-            <h2>🏆 Ranking</h2>
-            <div id="ranking-list" class="ranking-list"></div>
-        </div>
-    </div>
-
-    <div id="multiplayer-modal" class="modal hidden">
-        <div class="modal-card">
-            <button class="modal-close">&times;</button>
-            <h2>🎮 Multijugador</h2>
-
-            <div id="mp-home" class="mp-section">
-                <button id="create-room-btn" class="btn-primary">🎯 Crear Sala</button>
-                <p class="mp-divider-text">o</p>
-                <input type="text" id="join-code-input" placeholder="Código de sala" maxlength="6">
-                <button id="join-room-btn" class="btn-secondary">🚀 Unirse</button>
+            <div class="ticker" id="ticker">
+                <span class="ticker-icon" id="ticker-icon">🌪</span>
+                <span id="ticker-text">Sin eventos</span>
+                <span class="ticker-pips" id="ticker-pips"></span>
             </div>
 
-            <div id="mp-room" class="mp-section hidden">
-                <p>Código de sala:</p>
-                <div class="room-code">
+            <div class="stage-actions">
+                <button class="btn btn-ghost btn-small" id="settings-btn">Ajustes de partida</button>
+                <button class="btn btn-ghost btn-small" id="skin-btn">Estilo del tablero</button>
+                <span class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> apuntar <kbd>Espacio</kbd> soltar <kbd>1</kbd>–<kbd>4</kbd> poderes</span>
+            </div>
+        </section>
+
+        <!-- Placa del jugador amarillo -->
+        <section class="plaque" data-color="yellow" id="plaque-yellow" aria-label="Jugador amarillo">
+            <div class="plaque-head">
+                <span class="disc yellow" aria-hidden="true"></span>
+                <div class="plaque-id">
+                    <strong class="plaque-name" data-name>Amarillo</strong>
+                    <span class="plaque-role" data-role>Jugador 2</span>
+                </div>
+                <span class="plaque-score" data-score title="Partidas ganadas en esta sesión">0</span>
+            </div>
+            <div class="charge" data-charge aria-label="Cargas"></div>
+            <div class="powers" data-powers></div>
+        </section>
+    </main>
+
+    <!-- Ajustes de partida -->
+    <dialog class="sheet" id="setup">
+        <form method="dialog" id="setup-form">
+            <h2>Nueva partida</h2>
+
+            <fieldset>
+                <legend>Rival</legend>
+                <div class="seg" data-group="mode">
+                    <label><input type="radio" name="mode" value="ai" checked><span>Contra la IA</span></label>
+                    <label><input type="radio" name="mode" value="pvp"><span>2 jugadores aquí</span></label>
+                </div>
+                <div class="seg seg-sub" data-group="level" id="level-row">
+                    <label><input type="radio" name="level" value="easy"><span>Fácil</span></label>
+                    <label><input type="radio" name="level" value="normal" checked><span>Normal</span></label>
+                    <label><input type="radio" name="level" value="hard"><span>Difícil</span></label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Tablero</legend>
+                <div class="seg" data-group="size">
+                    <label><input type="radio" name="size" value="7x6" checked><span>7 × 6</span></label>
+                    <label><input type="radio" name="size" value="8x7"><span>8 × 7</span></label>
+                    <label><input type="radio" name="size" value="9x8"><span>9 × 8</span></label>
+                    <label><input type="radio" name="size" value="10x9"><span>10 × 9</span></label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Mapa</legend>
+                <div class="maps" id="maps"></div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Estilo del tablero</legend>
+                <button type="button" class="skin-current" id="skin-open">
+                    <span class="skin-current-preview" id="skin-current-preview"></span>
+                    <span><b id="skin-current-name">Clásico</b><small>Cambiar estilo</small></span>
+                </button>
+            </fieldset>
+
+            <label class="switch">
+                <input type="checkbox" name="events" checked>
+                <span class="switch-track"></span>
+                <span>Eventos de caos <small>Remolinos, terremotos, meteoritos…</small></span>
+            </label>
+
+            <div class="sheet-actions">
+                <button type="button" class="btn btn-ghost" value="cancel" id="setup-cancel">Cancelar</button>
+                <button type="submit" class="btn btn-primary" value="start">Empezar partida</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Estilo del tablero -->
+    <dialog class="sheet" id="skins">
+        <form method="dialog">
+            <h2>Estilo del tablero</h2>
+            <p class="muted">Se aplica al momento, también a mitad de partida.</p>
+            <div class="skins" id="skin-list"></div>
+            <div class="sheet-actions">
+                <button class="btn btn-primary" value="close">Listo</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Cómo se juega -->
+    <dialog class="sheet" id="help">
+        <form method="dialog">
+            <h2>Cómo se juega</h2>
+            <p class="lead">Conecta cuatro fichas de tu color en línea: horizontal, vertical o diagonal.</p>
+            <h3>Cargas y poderes</h3>
+            <p>Ganas una carga al empezar cada turno (máximo 6). Antes de soltar tu ficha puedes gastar cargas en un poder; solo uno por turno.</p>
+            <ul class="help-powers" id="help-powers"></ul>
+            <h3>Eventos de caos</h3>
+            <p>Cada pocas tiradas ocurre un evento. Debajo del tablero ves cuál viene y cuántas tiradas faltan, así que puedes prepararte. Si un evento deja cuatro en raya a los dos a la vez, es empate.</p>
+            <h3>Piedras y hielo</h3>
+            <p>Las piedras hacen de suelo: las fichas se apoyan encima. En una columna congelada nadie puede soltar fichas hasta que se derrita.</p>
+            <div class="sheet-actions">
+                <button class="btn btn-primary" value="close">Entendido</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Perfil -->
+    <dialog class="sheet sheet-narrow" id="profile">
+        <form method="dialog" id="profile-form">
+            <div class="profile-top">
+                <span class="avatar avatar-big" id="profile-initial">?</span>
+                <div>
+                    <h2 id="profile-name">Usuario</h2>
+                    <p class="muted" id="profile-email">Sin email</p>
+                </div>
+            </div>
+            <div class="stats">
+                <div><strong id="profile-wins">0</strong><span>victorias</span></div>
+                <div><strong id="profile-points">0</strong><span>puntos</span></div>
+            </div>
+            <div class="field-row" id="email-row">
+                <input type="email" id="profile-email-input" placeholder="Tu email" aria-label="Email">
+                <button type="button" class="btn btn-ghost" id="save-email-btn">Guardar email</button>
+            </div>
+            <p class="muted small" id="guest-note" hidden>Juegas como invitado. Crea una cuenta para entrar en el ranking y jugar online.</p>
+            <div class="sheet-actions">
+                <button type="button" class="btn btn-danger" id="logout-btn">Cerrar sesión</button>
+                <button class="btn btn-primary" value="close">Cerrar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Ranking -->
+    <dialog class="sheet sheet-narrow" id="ranking">
+        <form method="dialog">
+            <h2>Ranking</h2>
+            <ol class="ranking-list" id="ranking-list"></ol>
+            <div class="sheet-actions">
+                <button class="btn btn-primary" value="close">Cerrar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Online -->
+    <dialog class="sheet sheet-narrow" id="online">
+        <form method="dialog" id="online-form">
+            <h2>Jugar online</h2>
+            <div id="mp-home">
+                <p class="muted">Crea una sala y pásale el código a tu rival. La partida usa tus ajustes actuales de tablero y mapa.</p>
+                <button type="button" class="btn btn-primary btn-block" id="create-room-btn">Crear sala</button>
+                <div class="or"><span>o únete con un código</span></div>
+                <div class="field-row">
+                    <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6" autocomplete="off" aria-label="Código de sala">
+                    <button type="button" class="btn btn-ghost" id="join-room-btn">Unirme</button>
+                </div>
+            </div>
+            <div id="mp-room" hidden>
+                <p class="muted">Código de la sala</p>
+                <button type="button" class="room-code" id="copy-code-btn" title="Copiar código">
                     <strong id="room-code">------</strong>
-                    <button id="copy-code-btn" class="btn-copy">📋</button>
-                </div>
-                <p id="mp-status" class="mp-status waiting">Esperando jugador 2...</p>
-                <button id="leave-btn" class="btn-danger">Salir de Sala</button>
+                    <span>Copiar</span>
+                </button>
+                <p class="mp-status" id="mp-status">Esperando a tu rival…</p>
+                <button type="button" class="btn btn-danger btn-block" id="leave-btn">Salir de la sala</button>
             </div>
+            <p class="error-msg" id="mp-error" role="alert"></p>
+            <div class="sheet-actions">
+                <button class="btn btn-ghost" value="close">Cerrar</button>
+            </div>
+        </form>
+    </dialog>
 
-            <p id="mp-error" class="error-msg"></p>
-        </div>
-    </div>
+    <!-- Amigos -->
+    <dialog class="sheet sheet-narrow" id="friends">
+        <form method="dialog">
+            <h2>Amigos</h2>
+            <p class="muted" id="friends-blocked" hidden></p>
+            <div id="friends-body">
+                <label class="search">
+                    <span class="sr-only">Buscar jugador</span>
+                    <input type="text" id="friend-search" placeholder="Buscar por nombre de usuario" autocomplete="off">
+                </label>
+                <ul class="people" id="friend-results"></ul>
+
+                <section id="incoming-section" hidden>
+                    <h3>Solicitudes</h3>
+                    <ul class="people" id="friend-incoming"></ul>
+                </section>
+
+                <section>
+                    <h3>Tus amigos <span class="muted" id="friends-count"></span></h3>
+                    <ul class="people" id="friend-list"></ul>
+                </section>
+
+                <section id="outgoing-section" hidden>
+                    <h3>Enviadas</h3>
+                    <ul class="people" id="friend-outgoing"></ul>
+                </section>
+            </div>
+            <div class="sheet-actions">
+                <button class="btn btn-primary" value="close">Cerrar</button>
+            </div>
+        </form>
+    </dialog>
+
+    <div class="invites" id="invites" aria-live="polite"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/utils/api.js"></script>
+    <script src="../js/scene.js"></script>
+    <script src="../js/engine.js"></script>
+    <script src="../js/fx.js"></script>
+    <script src="../js/components/social.js"></script>
     <script src="../js/components/game.js"></script>
 </body>
 </html>

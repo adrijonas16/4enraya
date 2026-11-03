@@ -1,131 +1,108 @@
-class Login {
-    constructor() {
-        console.log('Login class created');
-        this.init();
+(function () {
+    'use strict';
+    const $ = id => document.getElementById(id);
+
+    // vuelta desde Google con error en la URL
+    const params = new URLSearchParams(location.search + '&' + location.hash.slice(1));
+    const oauthError = params.get('error_description');
+
+    // si ya hay sesión, directo al juego
+    if (api.getCurrentUser() && !oauthError) { location.replace('game.html'); return; }
+
+    function show(kind, msg) {
+        $('login-error').textContent = kind === 'error' ? msg : '';
+        $('login-success').textContent = kind === 'ok' ? msg : '';
     }
 
-    init() {
-        console.log('Login init called');
-        console.log('API available:', typeof api);
-        this.bindTabs();
-        this.bindForms();
-        this.bindPasswordToggles();
-        console.log('All bindings done');
+    function busy(form, on) {
+        const b = form.querySelector('[type="submit"]');
+        b.disabled = on;
+        b.dataset.label = b.dataset.label || b.textContent;
+        b.textContent = on ? 'Un momento…' : b.dataset.label;
     }
 
-    bindPasswordToggles() {
-        document.querySelectorAll('.toggle-password').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
-                const input = document.getElementById(targetId);
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    btn.textContent = '🙈';
-                } else {
-                    input.type = 'password';
-                    btn.textContent = '👁️';
-                }
-            });
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => { t.classList.toggle('active', t === tab); t.setAttribute('aria-selected', t === tab); });
+            document.querySelectorAll('.form').forEach(f => f.classList.toggle('active', f.id === tab.dataset.tab + '-form'));
+            show();
+            document.querySelector(`#${tab.dataset.tab}-form input`).focus();
         });
-    }
-
-    bindTabs() {
-        document.querySelectorAll('.login-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById(tab.dataset.tab + '-form').classList.add('active');
-                this.clearMessages();
-            });
-        });
-    }
-
-    bindForms() {
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleLogin();
-        });
-
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleRegister();
-        });
-    }
-
-    async handleLogin() {
-        const email = document.getElementById('login-email').value.trim();
-        const password = document.getElementById('login-password').value;
-
-        if (!email || !password) {
-            this.showError('Completa todos los campos');
-            return;
-        }
-
-        try {
-            const user = await api.login(email, password);
-            this.redirectToGame();
-        } catch (err) {
-            this.showError(err.message);
-        }
-    }
-
-    async handleRegister() {
-        const username = document.getElementById('reg-username').value.trim();
-        const email = document.getElementById('reg-email').value.trim();
-        const password = document.getElementById('reg-password').value;
-
-        if (!username || !email || !password) {
-            this.showError('Completa todos los campos');
-            return;
-        }
-
-        if (password.length < 4) {
-            this.showError('La contraseña debe tener al menos 4 caracteres');
-            return;
-        }
-
-        try {
-            await api.register(username, email, password);
-            this.showSuccess('Cuenta creada. Inicia sesión.');
-            document.querySelector('[data-tab="login"]').click();
-        } catch (err) {
-            this.showError(err.message);
-        }
-    }
-
-    showError(msg) {
-        const errorEl = document.getElementById('login-error');
-        const successEl = document.getElementById('login-success');
-        errorEl.textContent = msg;
-        errorEl.style.display = 'block';
-        successEl.style.display = 'none';
-    }
-
-    showSuccess(msg) {
-        const errorEl = document.getElementById('login-error');
-        const successEl = document.getElementById('login-success');
-        successEl.textContent = msg;
-        successEl.style.display = 'block';
-        errorEl.style.display = 'none';
-    }
-
-    clearMessages() {
-        document.getElementById('login-error').style.display = 'none';
-        document.getElementById('login-success').style.display = 'none';
-    }
-
-    redirectToGame() {
-        window.location.href = '../html/game.html';
-    }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('DOM loaded, creating Login');
-        new Login();
     });
-} else {
-    console.log('DOM already ready, creating Login');
-    new Login();
-}
+
+    document.querySelectorAll('.pw-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = $(btn.dataset.target);
+            const hidden = input.type === 'password';
+            input.type = hidden ? 'text' : 'password';
+            btn.textContent = hidden ? 'Ocultar' : 'Mostrar';
+        });
+    });
+
+    $('login-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const id = $('login-email').value.trim();
+        const pw = $('login-password').value;
+        if (!id || !pw) return show('error', 'Escribe tu usuario y tu contraseña');
+        busy(e.target, true);
+        try {
+            await api.login(id, pw);
+            location.href = 'game.html';
+        } catch (err) {
+            show('error', err.message);
+        } finally { busy(e.target, false); }
+    });
+
+    $('register-form').addEventListener('submit', async e => {
+        e.preventDefault();
+        const username = $('reg-username').value.trim();
+        const email = $('reg-email').value.trim();
+        const pw = $('reg-password').value;
+        if (!username || !email || !pw) return show('error', 'Rellena los tres campos');
+        if (pw.length < 4) return show('error', 'La contraseña necesita al menos 4 caracteres');
+        busy(e.target, true);
+        try {
+            await api.register(username, email, pw);
+            await api.login(username, pw);
+            location.href = 'game.html';
+        } catch (err) {
+            show('error', err.message);
+        } finally { busy(e.target, false); }
+    });
+
+    const gbtn = $('google-btn');
+    const gLabel = gbtn.querySelector('span');
+    if (!api.online) {
+        gbtn.disabled = true;
+        gLabel.textContent = 'Google no disponible sin conexión';
+    }
+    gbtn.addEventListener('click', async () => {
+        gbtn.disabled = true;
+        gLabel.textContent = 'Abriendo Google…';
+        try { await api.loginWithGoogle(); }
+        catch (err) { show('error', err.message); gbtn.disabled = false; gLabel.textContent = 'Continuar con Google'; }
+    });
+
+    if (oauthError) {
+        show('error', /provider is not enabled/i.test(oauthError)
+            ? 'El inicio con Google aún no está activado en el servidor.'
+            : 'Google no pudo completar el inicio de sesión. Prueba otra vez.');
+        history.replaceState(null, '', location.pathname);
+    } else if (api.online) {
+        // ¿volvemos de Google con sesión?
+        gLabel.textContent = 'Comprobando sesión…';
+        gbtn.disabled = true;
+        api.finishOAuth().then(user => {
+            if (user) { location.replace('game.html'); return; }
+            gbtn.disabled = false; gLabel.textContent = 'Continuar con Google';
+        }).catch(err => {
+            show('error', err.message);
+            gbtn.disabled = false; gLabel.textContent = 'Continuar con Google';
+        });
+    }
+
+    $('guest-btn').addEventListener('click', () => {
+        api.loginAsGuest();
+        location.href = 'game.html';
+    });
+})();

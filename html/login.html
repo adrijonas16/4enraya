@@ -2,49 +2,97 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>4 en Raya Brutal - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0b2029">
+    <title>4 en Raya</title>
+    <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
     <link rel="stylesheet" href="../css/login.css">
 </head>
 <body>
-    <div id="login-screen" class="screen active">
-        <div class="login-card">
-            <div class="login-logo">🔥</div>
-            <h1>4 en Raya Brutal</h1>
-            <p class="login-subtitle">Caos, poderes y eventos inesperados</p>
+    <div class="scene" id="scene" aria-hidden="true">
+        <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
+        <div class="spot"></div>
+        <canvas></canvas>
+        <div class="grain"></div>
+        <div class="vignette"></div>
+        <div class="flash"></div>
+    </div>
+    <main class="entry">
+        <section class="hero" aria-labelledby="title">
+            <div class="mini-board" aria-hidden="true">
+                <div class="mini-pieces">
+                    <i class="disc red" style="--c:0;--r:3;--i:0"></i>
+                    <i class="disc yellow" style="--c:1;--r:3;--i:1"></i>
+                    <i class="disc red" style="--c:1;--r:2;--i:2"></i>
+                    <i class="disc yellow" style="--c:2;--r:3;--i:3"></i>
+                    <i class="disc yellow" style="--c:2;--r:2;--i:4"></i>
+                    <i class="disc red" style="--c:2;--r:1;--i:5"></i>
+                    <i class="disc yellow" style="--c:3;--r:3;--i:6"></i>
+                    <i class="disc yellow" style="--c:3;--r:2;--i:7"></i>
+                    <i class="disc yellow" style="--c:3;--r:1;--i:8"></i>
+                    <i class="disc red last" style="--c:3;--r:0;--i:9"></i>
+                </div>
+                <div class="mini-plate"></div>
+            </div>
+            <h1 id="title">4 en<br>raya</h1>
+            <p class="tagline">El clásico de siempre, ahora con poderes, hielo y terremotos.</p>
+        </section>
 
-            <div class="login-tabs">
-                <button class="login-tab active" data-tab="login">Entrar</button>
-                <button class="login-tab" data-tab="register">Crear</button>
+        <section class="panel glass" aria-label="Acceso">
+            <button type="button" class="btn btn-google btn-block" id="google-btn">
+                <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+                <span>Continuar con Google</span>
+            </button>
+            <div class="or"><span>o con tu usuario</span></div>
+
+            <div class="tabs" role="tablist">
+                <button class="tab active" role="tab" aria-selected="true" data-tab="login">Entrar</button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="register">Crear cuenta</button>
             </div>
 
-            <form id="login-form" class="login-form active">
-                <input type="text" id="login-email" placeholder="Usuario o Email" required>
-                <div class="password-wrapper">
-                    <input type="password" id="login-password" placeholder="Contraseña" required>
-                    <button type="button" class="toggle-password" data-target="login-password">👁️</button>
-                </div>
-                <button type="submit" class="btn-primary">Iniciar Sesión</button>
+            <form id="login-form" class="form active">
+                <label>Usuario o email
+                    <input type="text" id="login-email" autocomplete="username" required>
+                </label>
+                <label>Contraseña
+                    <span class="pw">
+                        <input type="password" id="login-password" autocomplete="current-password" required>
+                        <button type="button" class="pw-toggle" data-target="login-password">Mostrar</button>
+                    </span>
+                </label>
+                <button type="submit" class="btn btn-primary btn-block">Entrar</button>
             </form>
 
-            <form id="register-form" class="login-form">
-                <input type="text" id="reg-username" placeholder="Nombre de usuario" required maxlength="15">
-                <input type="email" id="reg-email" placeholder="Email" required>
-                <div class="password-wrapper">
-                    <input type="password" id="reg-password" placeholder="Contraseña" required minlength="4">
-                    <button type="button" class="toggle-password" data-target="reg-password">👁️</button>
-                </div>
-                <button type="submit" class="btn-primary">Crear Cuenta</button>
+            <form id="register-form" class="form">
+                <label>Nombre de usuario
+                    <input type="text" id="reg-username" autocomplete="username" required maxlength="15">
+                </label>
+                <label>Email
+                    <input type="email" id="reg-email" autocomplete="email" required>
+                </label>
+                <label>Contraseña <small>mínimo 4 caracteres</small>
+                    <span class="pw">
+                        <input type="password" id="reg-password" autocomplete="new-password" required minlength="4">
+                        <button type="button" class="pw-toggle" data-target="reg-password">Mostrar</button>
+                    </span>
+                </label>
+                <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
             </form>
 
-            <p id="login-error" class="error-msg"></p>
-            <p id="login-success" class="success-msg"></p>
-        </div>
-    </div>
+            <p id="login-error" class="error-msg" role="alert"></p>
+            <p id="login-success" class="success-msg" role="status"></p>
+
+            <div class="or"><span>o</span></div>
+            <button type="button" class="btn btn-ghost btn-block" id="guest-btn">Jugar como invitado</button>
+            <p class="guest-note">Como invitado juegas en local y contra la IA. Para el ranking y las salas online necesitas cuenta.</p>
+        </section>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../js/utils/api.js"></script>
+    <script src="../js/scene.js"></script>
     <script src="../js/components/login.js"></script>
+    <script>new Scene(document.getElementById('scene'));</script>
 </body>
 </html>
