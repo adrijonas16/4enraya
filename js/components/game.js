@@ -1,1521 +1,1193 @@
-const CONNECT = 4;
-const PLAYERS = ['red', 'yellow'];
-const PLAYER_NAMES = { red: 'Rojo', yellow: 'Amarillo' };
+/* ==========================================================
+   4 en Raya Brutal — interfaz, animaciones y flujo de partida
+   ========================================================== */
+(function () {
+    'use strict';
 
-const POWER_POINTS = { bomb: 0, columnShift: 2, freeze: 4, doubleDrop: 6 };
+    const E = window.Engine;
+    const $ = id => document.getElementById(id);
+    const wait = ms => new Promise(res => setTimeout(res, ms));
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sound = new Sound();
+    const PALETTE = {
+        red: ['#e5342a', '#ff8a74', '#ffb3a3', '#8f150f'],
+        yellow: ['#f5b915', '#ffe58a', '#fff3c2', '#a76d00'],
+    };
 
-const EVENT_POOL = [
-    { id: 'whirlwind', name: '🌪 Remolino', warning: 'En 3 segundos pasará un remolino.' },
-    { id: 'earthquake', name: '🌋 Terremoto', warning: 'En 3 segundos habrá un terremoto.' },
-    { id: 'gravityFlip', name: '🧲 Gravedad caótica', warning: 'En 3 segundos cambiará la gravedad.' },
-    { id: 'autoBomb', name: '💣 Bomba', warning: 'En 3 segundos una bomba destruirá una ficha.' },
-    { id: 'autoShift', name: '🌊 Ola', warning: 'En 3 segundos una ola moverá una columna.' },
-    { id: 'autoFreeze', name: '❄️ Hielo', warning: 'En 3 segundos una columna se congelará.' },
-    { id: 'bonusPiece', name: '⚡ Bonus', warning: 'En 3 segundos aparecerá una ficha extra.' },
-];
+    /* ==========================================================
+       Renderizador del tablero
+       ========================================================== */
+    class BoardView {
+        constructor() {
+            this.machine = $('machine');
+            this.grid = $('grid');
+            this.layer = $('pieces');
+            this.overlay = $('overlay');
+            this.hits = $('hits');
+            this.ghost = $('ghost');
+            this.winline = $('winline');
+            this.els = new Map();   // id -> elemento
+            this.pos = new Map();   // id -> [r, c]
+            this.pitch = 64;
+            this.rows = 6; this.cols = 7;
+            this.glow = document.createElement('div');
+            this.glow.className = 'colglow';
+        }
 
-const MAPS = {
-    classic: { name: 'Clásico', setup: () => {} },
-    obstacles: {
-        name: '🧱 Obstáculos',
-        setup: () => placeRandomBlockedCells(8)
-    },
-    chaos: {
-        name: '🌪 Caos',
-        setup: () => { eventFrequency = [2, 4]; }
-    },
-    frozen: {
-        name: '❄️ Congelado',
-        setup: () => {
-            for (let c = 0; c < cols; c++) {
-                if (Math.random() < 0.3) frozenColumns[c] = 3;
+        setup(state) {
+            this.rows = state.rows; this.cols = state.cols;
+            this.machine.style.setProperty('--rows', state.rows);
+            this.machine.style.setProperty('--cols', state.cols);
+            this.layer.innerHTML = '';
+            this.overlay.innerHTML = '';
+            this.overlay.appendChild(this.glow);
+            this.winline.innerHTML = '';
+            this.els.clear(); this.pos.clear();
+            this.hits.innerHTML = '';
+            for (let c = 0; c < state.cols; c++) {
+                const b = document.createElement('button');
+                b.className = 'hit';
+                b.type = 'button';
+                b.dataset.col = c;
+                b.setAttribute('aria-label', `Columna ${c + 1}`);
+                this.hits.appendChild(b);
             }
-        }
-    },
-    random: {
-        name: '🎲 Aleatorio',
-        setup: () => {
-            const keys = Object.keys(MAPS).filter(k => k !== 'random');
-            MAPS[keys[Math.floor(Math.random() * keys.length)]].setup();
-        }
-    },
-};
-
-class SoundManager {
-    constructor() {
-        this.audioContext = null;
-        this.enabled = true;
-        this.init();
-    }
-
-    init() {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {
-            console.log('Audio not supported');
-            this.enabled = false;
-        }
-    }
-
-    resume() {
-        if (this.audioContext && this.audioContext.state === 'suspended') {
-            this.audioContext.resume();
-        }
-    }
-
-    play(type) {
-        if (!this.enabled) return;
-        this.resume();
-        
-        const ctx = this.audioContext;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        
-        const now = ctx.currentTime;
-        
-        switch(type) {
-            case 'drop':
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
-                break;
-            case 'win':
-                osc.frequency.setValueAtTime(523, now);
-                osc.frequency.setValueAtTime(659, now + 0.15);
-                osc.frequency.setValueAtTime(784, now + 0.3);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now);
-                osc.stop(now + 0.5);
-                break;
-            case 'bomb':
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
-                break;
-            case 'whirlwind':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(800, now + 0.5);
-                osc.frequency.linearRampToValueAtTime(200, now + 1);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 1);
-                osc.start(now);
-                osc.stop(now + 1);
-                break;
-            case 'earthquake':
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(80, now);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now);
-                osc.stop(now + 0.5);
-                break;
-            case 'freeze':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.exponentialRampToValueAtTime(400, now + 0.2);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now);
-                osc.stop(now + 0.2);
-                break;
-            case 'power':
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(600, now);
-                osc.frequency.setValueAtTime(800, now + 0.05);
-                osc.frequency.setValueAtTime(600, now + 0.1);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now);
-                osc.stop(now + 0.15);
-                break;
-            case 'bonus':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.setValueAtTime(600, now + 0.1);
-                osc.frequency.setValueAtTime(800, now + 0.2);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
-                break;
-        }
-    }
-}
-
-const sound = new SoundManager();
-
-class Game {
-    constructor() {
-        this.user = api.getCurrentUser();
-        this.isMultiplayer = false;
-        this.room = null;
-        this.gameId = null;
-        this.isHost = false;
-        this.myColor = null;
-        this.subscriptions = [];
-        this.gameStarted = false;
-        this.isInitialized = false;
-        this.playerNames = {};
-        this.gameSubscribed = false;
-
-        this.init();
-    }
-
-    init() {
-        if (!this.user) {
-            window.location.href = '../html/login.html';
-            return;
+            this.layout();
+            this.render(state, { animate: false });
         }
 
-        this.loadUserInfo();
-        this.bindEvents();
-        this.bindGameControls();
-        this.bindMultiplayer();
-        this.createEmptyBoard();
-        this.renderBoard();
-        this.isInitialized = true;
-    }
-
-    loadUserInfo() {
-        document.getElementById('user-name').textContent = this.user.username;
-        document.getElementById('user-points').textContent = (this.user.total_points || 0) + ' pts';
-        document.getElementById('playerPoints').textContent = (this.user.total_points || 0) + ' pts';
-    }
-
-    vibrate(pattern = [50, 30, 50]) {
-        if ('vibrate' in navigator) {
-            navigator.vibrate(pattern);
-        }
-    }
-
-    bindEvents() {
-        document.getElementById('profile-btn').addEventListener('click', () => this.showProfile());
-        document.getElementById('save-email-btn').addEventListener('click', () => this.saveEmail());
-        document.getElementById('logout-btn').addEventListener('click', () => this.logout());
-        document.getElementById('ranking-btn').addEventListener('click', () => this.showRanking());
-        document.getElementById('multiplayer-btn').addEventListener('click', () => this.showMultiplayer());
-
-        document.querySelectorAll('.modal-close').forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.closest('.modal').classList.remove('active');
-                btn.closest('.modal').classList.add('hidden');
-            });
-        });
-
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                    modal.classList.add('hidden');
-                }
-            });
-        });
-    }
-
-    bindGameControls() {
-        document.getElementById('modeSelect').addEventListener('change', () => this.updateBoardState());
-        document.getElementById('rowsSelect').addEventListener('change', () => this.updateBoardState());
-        document.getElementById('colsSelect').addEventListener('change', () => this.updateBoardState());
-
-        document.getElementById('newGameBtn').addEventListener('click', () => this.startGame());
-
-        document.querySelectorAll('.power-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.togglePower(btn.dataset.power));
-        });
-    }
-
-    bindMultiplayer() {
-        document.getElementById('create-room-btn')?.addEventListener('click', () => this.createRoom());
-        document.getElementById('join-room-btn')?.addEventListener('click', () => this.joinRoom());
-        document.getElementById('copy-code-btn')?.addEventListener('click', () => this.copyRoomCode());
-        document.getElementById('leave-btn')?.addEventListener('click', () => this.leaveRoom());
-    }
-
-    updateBoardState() {
-        const mode = document.getElementById('modeSelect').value;
-        const hasMode = mode !== '';
-        const boardEl = document.getElementById('board');
-        const hint = document.getElementById('mode-hint');
-
-        if (!this.gameStarted) {
-            boardEl.classList.add('disabled');
-            if (hint) hint.classList.remove('hidden');
-        } else if (hasMode) {
-            boardEl.classList.remove('disabled');
-            if (hint) hint.classList.add('hidden');
-            
-            if (this.isMultiplayer && currentPlayer !== this.myColor) {
-                boardEl.classList.add('disabled');
-            }
-        } else {
-            boardEl.classList.add('disabled');
-            if (hint) hint.classList.remove('hidden');
-        }
-    }
-
-    startGame() {
-        const mode = document.getElementById('modeSelect').value;
-        if (!mode) {
-            this.showAnnouncement('Selecciona un modo primero');
-            return;
-        }
-
-        this.gameStarted = true;
-        this.isMultiplayer = false;
-        this.myColor = null;
-        this.room = null;
-        
-        document.getElementById('mp-info').classList.add('hidden');
-        
-        this.resetState();
-        this.updateBoardState();
-        sound.play('power');
-    }
-
-    resetState() {
-        rows = Number(document.getElementById('rowsSelect').value);
-        cols = Number(document.getElementById('colsSelect').value);
-        mode = document.getElementById('modeSelect').value;
-        currentMap = document.getElementById('mapSelect').value;
-
-        board = this.createEmptyBoardData();
-        currentPlayer = 'red';
-        gameOver = false;
-        isBusy = false;
-        selectedPower = null;
-        turnCount = 0;
-        frozenColumns = {};
-        pendingDoubleDrop = false;
-        eventScheduled = false;
-        eventFrequency = [4, 8];
-        powerUsage = {
-            red: { bomb: false, columnShift: false, freeze: false, doubleDrop: false },
-            yellow: { bomb: false, columnShift: false, freeze: false, doubleDrop: false },
-        };
-
-        MAPS[currentMap].setup();
-        this.scheduleNextEvent();
-        this.renderBoard();
-        this.refreshHud();
-        this.refreshPowers();
-    }
-
-    createEmptyBoard() {
-        rows = 8;
-        cols = 9;
-        board = this.createEmptyBoardData();
-    }
-
-    createEmptyBoardData() {
-        return Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, () => ({ piece: null, blocked: false }))
-        );
-    }
-
-    scheduleNextEvent() {
-        const min = eventFrequency[0];
-        const max = eventFrequency[1];
-        nextEventTurn = turnCount + randomInt(min, max);
-        upcomingEvent = EVENT_POOL[randomInt(0, EVENT_POOL.length - 1)];
-    }
-
-    renderBoard(animatedDrop = null) {
-        const boardEl = document.getElementById('board');
-        boardEl.innerHTML = '';
-        boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--cell))`;
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const cellData = board[r][c] || { piece: null, blocked: false };
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-
-                if (this.gameStarted && !gameOver && !isBusy) {
-                    cell.classList.add('clickable');
-                }
-
-                if (cellData.blocked) cell.classList.add('blocked');
-                if (frozenColumns[c] > 0) cell.classList.add('frozen');
-
-                cell.addEventListener('click', () => this.onCellClick(c, r));
-                boardEl.appendChild(cell);
-
-                if (cellData.piece) {
-                    const piece = document.createElement('div');
-                    piece.className = `piece ${cellData.piece}`;
-
-                    if (animatedDrop && animatedDrop.row === r && animatedDrop.col === c) {
-                        piece.classList.add('drop');
-                        piece.style.setProperty('--drop-from', `${animatedDrop.dropFrom}px`);
-                    }
-
-                    cell.appendChild(piece);
-                }
-            }
-        }
-    }
-
-    onCellClick(col, row) {
-        if (!this.gameStarted || gameOver || isBusy) return;
-
-        if (selectedPower) {
-            this.usePower(selectedPower, col, row);
-            return;
-        }
-
-        if (mode === 'ai' && currentPlayer === 'yellow') return;
-
-        if (this.isMultiplayer) {
-            this.makeMove(col);
-        } else {
-            this.normalDrop(col);
-        }
-    }
-
-    normalDrop(col) {
-        if (frozenColumns[col] > 0) {
-            this.showAnnouncement(`❄️ La columna ${col + 1} está congelada`);
-            return;
-        }
-
-        const placed = this.dropPieceInColumn(col, currentPlayer);
-        if (!placed) return;
-
-        sound.play('drop');
-        this.afterSuccessfulMove(placed.row, placed.col, currentPlayer);
-
-        if (!gameOver && pendingDoubleDrop) {
-            pendingDoubleDrop = false;
-            const second = this.dropPieceInColumn(col, currentPlayer);
-            if (second) {
-                this.afterSuccessfulMove(second.row, second.col, currentPlayer, true);
-            }
-        }
-    }
-
-    dropPieceInColumn(col, player) {
-        for (let r = rows - 1; r >= 0; r--) {
-            if (board[r][col].blocked) continue;
-            if (!board[r][col].piece) {
-                board[r][col].piece = player;
-                const dropDistance = (r + 1) * 90;
-                this.renderBoard({ row: r, col, dropFrom: -dropDistance });
-                return { row: r, col };
-            }
-        }
-        return null;
-    }
-
-    afterSuccessfulMove(row, col, player, isExtraDrop = false) {
-        if (!isExtraDrop) turnCount++;
-
-        this.consumeFrozenColumns();
-        this.refreshHud();
-
-        const winCells = this.checkWinner(player);
-        if (winCells.length) {
-            this.markWinningCells(winCells);
-            gameOver = true;
-            playerPoints[player] += 1;
-            this.savePlayerPoints();
-            this.showAnnouncement(`🏆 Gana ${PLAYER_NAMES[player]}! +1 pt`);
-            sound.play('win');
-            this.vibrate([100, 50, 100, 50, 100]);
-            this.onWin(player);
-            return;
-        }
-
-        if (this.isBoardFull()) {
-            gameOver = true;
-            this.showAnnouncement('🤝 Empate caótico');
-            return;
-        }
-
-        if (turnCount >= nextEventTurn && !isExtraDrop) {
-            this.triggerRandomEventCountdown();
-            return;
-        }
-
-        this.switchTurn();
-
-        if (mode === 'ai' && currentPlayer === 'yellow' && !gameOver) {
-            isBusy = true;
-            setTimeout(() => this.aiMove(), 700);
-        }
-    }
-
-    switchTurn() {
-        currentPlayer = currentPlayer === 'red' ? 'yellow' : 'red';
-        this.refreshHud();
-        this.refreshPowers();
-        this.updateTurnDisplay();
-    }
-
-    updateTurnDisplay() {
-        const turnText = document.getElementById('turnText');
-        
-        if (this.isMultiplayer && this.playerNames) {
-            const playerName = this.playerNames[currentPlayer] || PLAYER_NAMES[currentPlayer];
-            const esMiTurno = currentPlayer === this.myColor;
-            turnText.innerHTML = `
-                Turno: <strong style="color: ${currentPlayer === 'red' ? 'var(--red1)' : 'var(--yellow1)'}">${playerName}</strong>
-                ${esMiTurno ? '<span style="color: var(--success); margin-left: 8px">(Tu turno)</span>' : ''}
-            `;
-        } else {
-            turnText.textContent = `Turno: ${PLAYER_NAMES[currentPlayer]}`;
-        }
-        turnText.style.color = currentPlayer === 'red' ? '#ff8b8b' : '#ffe46b';
-    }
-
-    consumeFrozenColumns() {
-        Object.keys(frozenColumns).forEach(k => {
-            frozenColumns[k]--;
-            if (frozenColumns[k] <= 0) delete frozenColumns[k];
-        });
-    }
-
-    checkWinner(player) {
-        const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (board[r][c].piece !== player) continue;
-
-                for (const [dr, dc] of directions) {
-                    const cells = [{ r, c }];
-                    for (let i = 1; i < CONNECT; i++) {
-                        const nr = r + dr * i;
-                        const nc = c + dc * i;
-                        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols || board[nr][nc].piece !== player) break;
-                        cells.push({ r: nr, c: nc });
-                    }
-                    if (cells.length >= CONNECT) return cells;
-                }
-            }
-        }
-        return [];
-    }
-
-    markWinningCells(cells) {
-        this.renderBoard();
-        cells.forEach(({ r, c }) => {
-            const index = r * cols + c;
-            const cell = document.getElementById('board').children[index];
-            const piece = cell?.querySelector('.piece');
-            if (piece) piece.classList.add('win');
-        });
-    }
-
-    isBoardFull() {
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (!board[r][c].blocked && !board[r][c].piece) return false;
-            }
-        }
-        return true;
-    }
-
-    refreshHud() {
-        if (gameOver) return;
-        const turnText = document.getElementById('turnText');
-        turnText.textContent = `Turno: ${PLAYER_NAMES[currentPlayer]}`;
-        turnText.style.color = currentPlayer === 'red' ? '#ff8b8b' : '#ffe46b';
-        document.getElementById('connectCount').textContent = CONNECT;
-    }
-
-    refreshPowers() {
-        document.getElementById('playerPoints').textContent = `${playerPoints[currentPlayer]} pts`;
-
-        document.querySelectorAll('.power-btn').forEach(btn => {
-            const power = btn.dataset.power;
-            const hasPoints = playerPoints[currentPlayer] >= POWER_POINTS[power];
-            btn.classList.remove('active', 'used', 'locked');
-            if (!hasPoints) btn.classList.add('locked');
-            if (selectedPower === power) btn.classList.add('active');
-            if (powerUsage[currentPlayer][power]) btn.classList.add('used');
-        });
-    }
-
-    togglePower(power) {
-        if (gameOver || isBusy) return;
-        const required = POWER_POINTS[power];
-
-        if (playerPoints[currentPlayer] < required) {
-            this.showAnnouncement(`Necesitas ${required} pts`);
-            return;
-        }
-
-        if (powerUsage[currentPlayer][power]) {
-            this.showAnnouncement('Ese poder ya fue usado');
-            return;
-        }
-
-        selectedPower = selectedPower === power ? null : power;
-        this.refreshPowers();
-        sound.play('power');
-
-        if (selectedPower) {
-            const btn = document.querySelector(`[data-power="${power}"]`);
-            this.showAnnouncement(`Poder: ${btn?.textContent.trim()}`);
-        }
-    }
-
-    usePower(power, col, row) {
-        if (power === 'bomb') {
-            if (board[row][col].piece && board[row][col].piece !== currentPlayer) {
-                this.createExplosion(col, row);
-                board[row][col].piece = null;
-                this.compactAllColumnsDown();
-                powerUsage[currentPlayer][power] = true;
-                selectedPower = null;
-                sound.play('bomb');
-                this.vibrate([100, 30, 100]);
-                this.renderBoard();
-                this.showAnnouncement(`💣 Bomba lanzada`);
-                this.checkWinAfterPower();
-            } else {
-                this.showAnnouncement('Toca una ficha enemiga');
+        layout() {
+            const wide = innerWidth > 1080;
+            const sideW = wide ? 2 * 250 + 2 * 36 + 64 : 24;
+            const availW = Math.min(innerWidth - sideW, 980);
+            const top = this.machine.getBoundingClientRect().top + scrollY;
+            const reserve = innerWidth <= 560 ? 90 : 120;
+            const availH = Math.max(260, innerHeight - top - reserve);
+            const p = Math.min(availW / (this.cols + 1), availH / (this.rows + 1.9));
+            this.pitch = Math.max(30, Math.min(86, Math.floor(p)));
+            this.machine.style.setProperty('--pitch', this.pitch + 'px');
+            for (const [id, [r, c]] of this.pos) {
+                const el = this.els.get(id);
+                el.getAnimations().forEach(a => a.finish());
+                el.style.transform = this.tf(r, c);
             }
         }
 
-        if (power === 'columnShift') {
-            if (frozenColumns[col] > 0) {
-                this.showAnnouncement('Columna congelada');
-                return;
-            }
-            this.moveColumnDown(col);
-            powerUsage[currentPlayer][power] = true;
-            selectedPower = null;
-            this.renderBoard();
-            sound.play('whirlwind');
-            this.showAnnouncement('🌊 Columna agitada');
-            this.checkWinAfterPower();
+        tf(r, c, dy = 0) {
+            return `translate(${c * this.pitch}px, ${r * this.pitch + dy}px)`;
         }
 
-        if (power === 'freeze') {
-            frozenColumns[col] = 2;
-            powerUsage[currentPlayer][power] = true;
-            selectedPower = null;
-            this.renderBoard();
-            sound.play('freeze');
-            this.showAnnouncement(`❄️ Columna ${col + 1} congelada`);
-            this.switchTurn();
+        makePiece(cell) {
+            const el = document.createElement('div');
+            el.className = 'piece ' + (cell.stone ? 'stone' : cell.color);
+            el.dataset.id = cell.id;
+            this.layer.appendChild(el);
+            this.els.set(cell.id, el);
+            return el;
         }
 
-        if (power === 'doubleDrop') {
-            if (frozenColumns[col] > 0) {
-                this.showAnnouncement('Columna congelada');
-                return;
-            }
-            powerUsage[currentPlayer][power] = true;
-            selectedPower = null;
-            pendingDoubleDrop = true;
-            this.normalDrop(col);
-            sound.play('bonus');
-            this.showAnnouncement('⚡ Doble ficha activada');
-        }
+        // Pinta el estado. Las fichas nuevas caen, las movidas se deslizan,
+        // las desaparecidas estallan. Devuelve una promesa al terminar.
+        render(state, { animate = true, explode = null, onLand = null } = {}) {
+            const seen = new Set();
+            const anims = [];
+            let maxDur = 0;
+            const speed = reduced ? 0.25 : 1;
 
-        this.refreshPowers();
-    }
+            for (let r = 0; r < state.rows; r++) {
+                for (let c = 0; c < state.cols; c++) {
+                    const cell = state.cells[r][c];
+                    if (!cell) continue;
+                    seen.add(cell.id);
+                    let el = this.els.get(cell.id);
+                    const prev = this.pos.get(cell.id);
+                    const target = this.tf(r, c);
 
-    checkWinAfterPower() {
-        const winCells = this.checkWinner(currentPlayer);
-        if (winCells.length) {
-            gameOver = true;
-            this.markWinningCells(winCells);
-            sound.play('win');
-            this.vibrate([100, 50, 100, 50, 100]);
-            this.showAnnouncement(`🏆 Gana ${PLAYER_NAMES[currentPlayer]}`);
-            
-            if (this.isMultiplayer && this.gameId) {
-                api.finishGame(this.gameId, currentPlayer, board);
-            }
-        } else {
-            this.switchTurn();
-            if (this.isMultiplayer && this.gameId) {
-                api.updateGame(this.gameId, board, currentPlayer);
-            }
-        }
-    }
-
-    moveColumnDown(col) {
-        const bottom = board[rows - 1][col].piece;
-        for (let r = rows - 1; r > 0; r--) {
-            if (!board[r][col].blocked) {
-                board[r][col].piece = board[r - 1][col].blocked ? null : board[r - 1][col].piece;
-            }
-        }
-        if (!board[0][col].blocked) board[0][col].piece = bottom;
-        this.compactAllColumnsDown();
-    }
-
-    compactAllColumnsDown() {
-        for (let c = 0; c < cols; c++) {
-            const pieces = [];
-            const blockedRows = new Set();
-            for (let r = rows - 1; r >= 0; r--) {
-                if (board[r][c].blocked) blockedRows.add(r);
-                if (board[r][c].piece) pieces.push(board[r][c].piece);
-                board[r][c].piece = null;
-            }
-            for (let r = rows - 1; r >= 0; r--) {
-                if (blockedRows.has(r)) continue;
-                if (pieces.length) board[r][c].piece = pieces.shift();
-            }
-        }
-    }
-
-    aiMove() {
-        if (gameOver) return;
-        let move = this.findWinningMove('yellow');
-        if (move == null) move = this.findWinningMove('red');
-        if (move == null) move = this.findPreferredMove();
-        if (move == null) move = this.findAnyValidMove();
-        isBusy = false;
-        if (move != null) this.normalDrop(move);
-    }
-
-    findWinningMove(player) {
-        for (let c = 0; c < cols; c++) {
-            if (frozenColumns[c] > 0) continue;
-            const r = this.getDropRow(c);
-            if (r == null) continue;
-            board[r][c].piece = player;
-            const win = this.checkWinner(player).length > 0;
-            board[r][c].piece = null;
-            if (win) return c;
-        }
-        return null;
-    }
-
-    findPreferredMove() {
-        const center = Math.floor(cols / 2);
-        const order = [];
-        for (let i = 0; i < cols; i++) {
-            const left = center - i;
-            const right = center + i;
-            if (left >= 0) order.push(left);
-            if (right < cols && right !== left) order.push(right);
-        }
-        for (const c of order) {
-            if (frozenColumns[c] > 0) continue;
-            if (this.getDropRow(c) != null) return c;
-        }
-        return null;
-    }
-
-    findAnyValidMove() {
-        const valid = [];
-        for (let c = 0; c < cols; c++) {
-            if (frozenColumns[c] > 0) continue;
-            if (this.getDropRow(c) != null) valid.push(c);
-        }
-        return valid.length ? valid[randomInt(0, valid.length - 1)] : null;
-    }
-
-    getDropRow(col) {
-        for (let r = rows - 1; r >= 0; r--) {
-            if (board[r][col].blocked) continue;
-            if (!board[r][col].piece) return r;
-        }
-        return null;
-    }
-
-    placeRandomBlockedCells(count) {
-        let placed = 0;
-        while (placed < count) {
-            const r = randomInt(1, rows - 2);
-            const c = randomInt(0, cols - 1);
-            if (!board[r][c].blocked && !board[r][c].piece) {
-                board[r][c].blocked = true;
-                placed++;
-            }
-        }
-    }
-
-    triggerRandomEventCountdown() {
-        if (eventScheduled) return;
-        eventScheduled = true;
-        let remaining = 3;
-        const warning = upcomingEvent.warning;
-
-        const showCountdown = () => {
-            this.showAnnouncement(`${warning} (${remaining})`);
-            remaining--;
-            if (remaining > 0) {
-                setTimeout(showCountdown, 1000);
-            } else {
-                this.showAnnouncement(`${upcomingEvent.name} en acción`);
-                const eventId = upcomingEvent.id;
-                setTimeout(async () => {
-                    this[eventId]();
-                    if (!gameOver) {
-                        this.checkEventWin();
-                        this.scheduleNextEvent();
-                        this.switchTurn();
-                        this.renderBoard();
-                        
-                        if (this.isMultiplayer && this.gameId) {
-                            await api.updateGame(this.gameId, board, currentPlayer);
+                    if (!el) {
+                        el = this.makePiece(cell);
+                        el.style.transform = target;
+                        if (animate && !cell.stone) {
+                            const dur = (240 + Math.sqrt(r + 1) * 95) * speed;
+                            const from = this.tf(-1.2, c);
+                            const bounce = this.tf(r, c, -this.pitch * 0.13);
+                            anims.push(el.animate([
+                                { transform: from, easing: 'cubic-bezier(.55,0,1,.45)' },
+                                { transform: target, offset: 0.72, easing: 'cubic-bezier(.2,.8,.4,1)' },
+                                { transform: bounce, offset: 0.86, easing: 'cubic-bezier(.6,0,1,1)' },
+                                { transform: target },
+                            ], { duration: dur }));
+                            const depth = r / Math.max(1, state.rows - 1);
+                            setTimeout(() => {
+                                sound.play('clack', { depth });
+                                this.machine.classList.remove('thump');
+                                void this.machine.offsetWidth;
+                                this.machine.classList.add('thump');
+                                onLand && onLand(r, c);
+                            }, dur * 0.72);
+                            maxDur = Math.max(maxDur, dur);
                         }
-                        
-                        if (mode === 'ai' && currentPlayer === 'yellow' && !gameOver) {
-                            isBusy = true;
-                            setTimeout(() => this.aiMove(), 700);
+                    } else if (prev && (prev[0] !== r || prev[1] !== c)) {
+                        el.getAnimations().forEach(a => a.cancel());
+                        const from = this.tf(prev[0], prev[1]);
+                        el.style.transform = target;
+                        if (animate) {
+                            const dist = Math.hypot(r - prev[0], c - prev[1]);
+                            const down = r > prev[0] && c === prev[1];
+                            const dur = (down ? 200 + Math.sqrt(dist) * 110 : 380 + dist * 35) * speed;
+                            const kf = down
+                                ? [
+                                    { transform: from, easing: 'cubic-bezier(.55,0,1,.45)' },
+                                    { transform: target, offset: 0.8, easing: 'ease-out' },
+                                    { transform: this.tf(r, c, -this.pitch * 0.06), offset: 0.9 },
+                                    { transform: target },
+                                ]
+                                : [
+                                    { transform: from, easing: 'cubic-bezier(.6,-0.2,.3,1.25)' },
+                                    { transform: target },
+                                ];
+                            anims.push(el.animate(kf, { duration: dur }));
+                            maxDur = Math.max(maxDur, dur);
                         }
                     }
-                    eventScheduled = false;
-                }, 600);
-            }
-        };
-
-        showCountdown();
-    }
-
-    checkEventWin() {
-        const redWin = this.checkWinner('red');
-        const yellowWin = this.checkWinner('yellow');
-        if (redWin.length) {
-            gameOver = true;
-            this.markWinningCells(redWin);
-            playerPoints['red'] += 1;
-            this.savePlayerPoints();
-            sound.play('win');
-            this.vibrate([100, 50, 100, 50, 100]);
-            this.showAnnouncement('🏆 Gana Rojo tras el caos!');
-            
-            if (this.isMultiplayer && this.gameId) {
-                api.finishGame(this.gameId, 'red', board);
-            }
-        } else if (yellowWin.length) {
-            gameOver = true;
-            this.markWinningCells(yellowWin);
-            playerPoints['yellow'] += 1;
-            this.savePlayerPoints();
-            sound.play('win');
-            this.vibrate([100, 50, 100, 50, 100]);
-            this.showAnnouncement('🏆 Gana Amarillo tras el caos!');
-            
-            if (this.isMultiplayer && this.gameId) {
-                api.finishGame(this.gameId, 'yellow', board);
-            }
-        } else if (this.isBoardFull()) {
-            gameOver = true;
-            this.showAnnouncement('🤝 Empate caótico');
-            
-            if (this.isMultiplayer && this.gameId) {
-                api.finishGame(this.gameId, null, board);
-            }
-        }
-    }
-
-    createExplosion(col, row) {
-        const boardEl = document.getElementById('board');
-        const colors = ['#ff6b35', '#ff0000', '#ffaa00', '#ff4500', '#ffcc00', '#ff0044'];
-        const cellSize = 56;
-        const gap = 6;
-        const padding = 12;
-        const centerX = padding + col * (cellSize + gap) + cellSize / 2;
-        const centerY = padding + row * (cellSize + gap) + cellSize / 2;
-
-        for (let i = 0; i < 16; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            const angle = (i / 16) * Math.PI * 2;
-            const distance = 30 + Math.random() * 50;
-            const size = 6 + Math.random() * 10;
-            
-            particle.style.cssText = `
-                position: absolute;
-                left: ${centerX}px;
-                top: ${centerY}px;
-                width: ${size}px;
-                height: ${size}px;
-                background: ${colors[Math.floor(Math.random() * colors.length)]};
-                border-radius: 50%;
-                --tx: ${Math.cos(angle) * distance}px;
-                --ty: ${Math.sin(angle) * distance}px;
-                animation: particle-explode 0.6s ease-out forwards;
-                pointer-events: none;
-                z-index: 1000;
-            `;
-            
-            boardEl.appendChild(particle);
-            setTimeout(() => particle.remove(), 600);
-        }
-    }
-
-    whirlwind() {
-        const boardEl = document.getElementById('board');
-        boardEl.classList.add('swirl');
-        sound.play('whirlwind');
-        this.vibrate([50, 30, 50, 30, 50]);
-
-        const pieces = [];
-        const blocked = [];
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (board[r][c].blocked) blocked.push({ r, c });
-                if (board[r][c].piece) pieces.push(board[r][c].piece);
-                board[r][c].piece = null;
-            }
-        }
-        const empty = [];
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (!board[r][c].blocked) empty.push({ r, c });
-            }
-        }
-        shuffle(empty);
-        pieces.forEach((piece, i) => {
-            if (i < empty.length) board[empty[i].r][empty[i].c].piece = piece;
-        });
-
-        setTimeout(() => boardEl.classList.remove('swirl'), 1000);
-        this.showAnnouncement('🌪 Remolino');
-    }
-
-    earthquake() {
-        const boardEl = document.getElementById('board');
-        boardEl.classList.add('shake');
-        sound.play('earthquake');
-        this.vibrate([100, 50, 100, 50, 100, 50, 100]);
-
-        const pieces = [];
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (board[r][c].piece) pieces.push(board[r][c].piece);
-                board[r][c].piece = null;
-            }
-        }
-        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
-        shuffle(pieces);
-        shuffle(dirs);
-        pieces.forEach((piece, i) => {
-            let placed = false;
-            for (let d = 0; d < dirs.length; d++) {
-                const [dr, dc] = dirs[d];
-                const nr = Math.floor(i / cols) + dr;
-                const nc = (i % cols) + dc;
-                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !board[nr][nc].blocked && !board[nr][nc].piece) {
-                    board[nr][nc].piece = piece;
-                    placed = true;
-                    break;
+                    el.classList.remove('win', 'target', 'dim');
+                    this.pos.set(cell.id, [r, c]);
                 }
             }
-            if (!placed) {
-                const r = Math.floor(i / cols);
-                const c = i % cols;
-                if (!board[r]?.[c]?.blocked) board[r][c].piece = piece;
-            }
-        });
-        setTimeout(() => boardEl.classList.remove('shake'), 700);
-        this.showAnnouncement('🌋 Terremoto');
-    }
 
-    gravityFlip() {
-        const boardEl = document.getElementById('board');
-        boardEl.classList.add('shake');
-        sound.play('whirlwind');
-        this.vibrate([50, 30, 50, 30, 50]);
-
-        const pieces = [];
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (board[r][c].piece) pieces.push(board[r][c].piece);
-                board[r][c].piece = null;
+            // desaparecidas
+            for (const [id, el] of [...this.els]) {
+                if (seen.has(id)) continue;
+                const [r, c] = this.pos.get(id) || [0, 0];
+                this.els.delete(id); this.pos.delete(id);
+                if (animate) {
+                    const boom = explode && explode.has(id);
+                    if (boom) {
+                        const pt = this.point(r, c);
+                        const color = el.classList.contains('red') ? 'red' : 'yellow';
+                        window.fx.burst(pt.x, pt.y, PALETTE[color].concat(['#ff9d2e', '#fff']), 30, 1.1);
+                    }
+                    const a = el.animate(
+                        boom
+                            ? [{ transform: el.style.transform + ' scale(1)', opacity: 1 }, { transform: el.style.transform + ' scale(1.5)', opacity: 0 }]
+                            : [{ opacity: 1 }, { opacity: 0 }],
+                        { duration: 260 * speed, fill: 'forwards' });
+                    a.onfinish = () => el.remove();
+                } else el.remove();
             }
+
+            this.renderIce(state.frozen, animate);
+            if (!animate) this.winline.innerHTML = '';
+            return wait(maxDur + 30);
         }
-        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
-        shuffle(pieces);
-        pieces.forEach((piece, i) => {
-            const r = Math.floor(i / cols);
-            const c = i % cols;
-            const shuffledDirs = [...dirs];
-            shuffle(shuffledDirs);
-            let placed = false;
-            for (const [dr, dc] of shuffledDirs) {
-                const nr = r + dr;
-                const nc = c + dc;
-                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !board[nr][nc].blocked && !board[nr][nc].piece) {
-                    board[nr][nc].piece = piece;
-                    placed = true;
-                    break;
+
+        renderIce(frozen, animate) {
+            const existing = new Map([...this.overlay.querySelectorAll('.ice')].map(el => [Number(el.dataset.col), el]));
+            for (let c = 0; c < this.cols; c++) {
+                const n = frozen[c] || 0;
+                const el = existing.get(c);
+                if (n > 0) {
+                    const ice = el || document.createElement('div');
+                    if (!el) {
+                        ice.className = 'ice';
+                        ice.dataset.col = c;
+                        ice.innerHTML = '<span></span>';
+                        this.overlay.appendChild(ice);
+                        if (animate) {
+                            const pt = this.point(0, c);
+                            window.fx.shards(pt.x, pt.y);
+                        }
+                    }
+                    ice.style.left = c * this.pitch + 'px';
+                    ice.querySelector('span').textContent = '❄ ' + n;
+                    ice.title = `Congelada durante ${n} turno${n > 1 ? 's' : ''}`;
+                } else if (el && !el.classList.contains('melt')) {
+                    el.classList.add('melt');
+                    setTimeout(() => el.remove(), 450);
                 }
             }
-            if (!placed && board[r]?.[c]) board[r][c].piece = piece;
-        });
-        setTimeout(() => boardEl.classList.remove('shake'), 700);
-        this.showAnnouncement('🧲 Gravedad caótica');
-    }
+        }
 
-    autoBomb() {
-        const targets = [];
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (board[r][c].piece) targets.push({ r, c });
+        markWin(lines) {
+            this.winline.innerHTML = '';
+            if (!lines) return;
+            for (const line of lines) {
+                line.forEach(([r, c]) => {
+                    for (const [id, [pr, pc]] of this.pos) {
+                        if (pr === r && pc === c) this.els.get(id).classList.add('win');
+                    }
+                });
+                const [a, b] = [line[0], line[line.length - 1]];
+                const p = this.pitch, h = p / 2;
+                const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                ln.setAttribute('x1', a[1] * p + h); ln.setAttribute('y1', a[0] * p + h);
+                ln.setAttribute('x2', b[1] * p + h); ln.setAttribute('y2', b[0] * p + h);
+                const len = Math.hypot(b[1] - a[1], b[0] - a[0]) * p;
+                ln.style.strokeDasharray = len;
+                ln.style.strokeDashoffset = len;
+                this.winline.appendChild(ln);
+            }
+            for (const [id, el] of this.els) {
+                if (!el.classList.contains('win') && !el.classList.contains('stone')) el.classList.add('dim');
             }
         }
-        if (targets.length) {
-            const t = targets[randomInt(0, targets.length - 1)];
-            this.createExplosion(t.c, t.r);
-            sound.play('bomb');
-            this.vibrate([100, 30, 100]);
-            board[t.r][t.c].piece = null;
-            this.compactAllColumnsDown();
-            this.showAnnouncement('💣 Bomba automática');
-        }
-    }
 
-    autoShift() {
-        const shift = Math.random() < 0.5 ? 1 : -1;
-        const col = randomInt(0, cols - 1);
-        const newCol = (col + shift + cols) % cols;
-        if (!frozenColumns[col] && !frozenColumns[newCol]) {
-            for (let r = 0; r < rows; r++) {
-                const temp = board[r][col].piece;
-                board[r][col].piece = board[r][newCol].piece;
-                board[r][newCol].piece = temp;
+        markTargets(state, color) {
+            for (const [id, [r, c]] of this.pos) {
+                const el = this.els.get(id);
+                const cell = state.cells[r][c];
+                const isTarget = color && cell && !cell.stone && cell.color !== color;
+                el.classList.toggle('target', !!isTarget);
             }
-            const boardEl = document.getElementById('board');
-            boardEl.classList.add('wave');
-            sound.play('whirlwind');
-            this.vibrate([50, 30, 50]);
-            setTimeout(() => boardEl.classList.remove('wave'), 600);
-            this.showAnnouncement('🌊 Ola automática');
         }
-    }
 
-    autoFreeze() {
-        const available = [];
-        for (let c = 0; c < cols; c++) {
-            if (!frozenColumns[c]) available.push(c);
-        }
-        if (available.length) {
-            frozenColumns[available[randomInt(0, available.length - 1)]] = 2;
-            sound.play('freeze');
-            this.vibrate([30, 20, 30]);
-            this.showAnnouncement('❄️ Hielo automático');
-        }
-    }
-
-    bonusPiece() {
-        const empty = [];
-        for (let c = 0; c < cols; c++) {
-            if (!frozenColumns[c] && this.getDropRow(c) !== null) empty.push(c);
-        }
-        if (empty.length) {
-            const col = empty[randomInt(0, empty.length - 1)];
-            const row = this.getDropRow(col);
-            board[row][col].piece = Math.random() < 0.5 ? 'red' : 'yellow';
-            sound.play('bonus');
-            this.vibrate([30, 20, 30]);
-            this.showAnnouncement('⚡ Ficha extra');
-        }
-    }
-
-    showAnnouncement(message, duration = 2000) {
-        const el = document.getElementById('announcement');
-        el.textContent = message;
-        el.classList.remove('hidden');
-        clearTimeout(this._announcementTimer);
-        this._announcementTimer = setTimeout(() => el.classList.add('hidden'), duration);
-    }
-
-    loadPlayerPoints() {
-        const saved = localStorage.getItem('4enRayaPlayerPoints');
-        return saved ? JSON.parse(saved) : { red: 0, yellow: 0 };
-    }
-
-    savePlayerPoints() {
-        localStorage.setItem('4enRayaPlayerPoints', JSON.stringify(playerPoints));
-    }
-
-    onWin(winner) {
-        if (winner === 'red') {
-            this.user.total_points = (this.user.total_points || 0) + 1;
-            this.user.total_wins = (this.user.total_wins || 0) + 1;
-            localStorage.setItem('user', JSON.stringify(this.user));
-            document.getElementById('user-points').textContent = this.user.total_points + ' pts';
-            api.saveGame(this.user.username, currentMap, true);
-        }
-    }
-
-    showProfile() {
-        document.getElementById('profile-name').textContent = this.user.username;
-        document.getElementById('profile-email').textContent = this.user.email || 'Sin email';
-        document.getElementById('profile-wins').textContent = this.user.total_wins || 0;
-        document.getElementById('profile-points').textContent = this.user.total_points || 0;
-        document.getElementById('profile-email-input').value = this.user.email || '';
-        document.getElementById('profile-modal').classList.add('active');
-        document.getElementById('profile-modal').classList.remove('hidden');
-    }
-
-    async saveEmail() {
-        const email = document.getElementById('profile-email-input').value.trim();
-        if (!email) return;
-        try {
-            await api.updateEmail(this.user.id, email);
-            this.user.email = email;
-            localStorage.setItem('user', JSON.stringify(this.user));
-            document.getElementById('profile-email').textContent = email;
-            this.showAnnouncement('Email guardado');
-        } catch (err) {
-            this.showAnnouncement('Error al guardar');
-        }
-    }
-
-    logout() {
-        api.logout();
-        window.location.href = '../html/login.html';
-    }
-
-    async showRanking() {
-        const modal = document.getElementById('ranking-modal');
-        const list = document.getElementById('ranking-list');
-        modal.classList.add('active');
-        modal.classList.remove('hidden');
-        list.innerHTML = '<p class="ranking-loading">Cargando...</p>';
-
-        try {
-            const ranking = await api.getRanking(20);
-            if (!ranking.length) {
-                list.innerHTML = '<p class="ranking-empty">No hay jugadores aún</p>';
-            } else {
-                list.innerHTML = ranking.map((p, i) => `
-                    <div class="ranking-item ${i < 3 ? 'top-' + (i + 1) : ''}">
-                        <span class="rank">#${i + 1}</span>
-                        <span class="username">${p.username}</span>
-                        <span class="points">${p.total_points} pts</span>
-                    </div>
-                `).join('');
+        setGhost(col, look) {
+            const g = this.ghost;
+            if (col == null || !look) {
+                g.classList.remove('show');
+                this.glow.classList.remove('show');
+                return;
             }
-        } catch (err) {
-            list.innerHTML = '<p class="ranking-empty">Error cargando</p>';
+            g.className = 'ghost show ' + (look.power ? 'power' : look.color);
+            g.textContent = look.power ? E.POWERS[look.power].icon : '';
+            g.style.transform = `translateX(${col * this.pitch}px)`;
+            this.glow.classList.add('show');
+            this.glow.classList.toggle('blocked', !!look.blocked);
+            this.glow.style.transform = `translateX(${col * this.pitch}px)`;
+        }
+
+        point(r, c) {
+            const rect = this.grid.getBoundingClientRect();
+            return { x: rect.left + (c + 0.5) * this.pitch, y: rect.top + (r + 0.5) * this.pitch };
+        }
+
+        cellFromEvent(ev) {
+            const rect = this.grid.getBoundingClientRect();
+            const c = Math.floor((ev.clientX - rect.left) / this.pitch);
+            const r = Math.floor((ev.clientY - rect.top) / this.pitch);
+            return { c: Math.max(0, Math.min(this.cols - 1, c)), r: Math.max(0, Math.min(this.rows - 1, r)) };
+        }
+
+        jolt(kind) {
+            const m = this.machine;
+            m.classList.remove('shake', 'spin', 'flip');
+            void m.offsetWidth;
+            m.classList.add(kind);
+            setTimeout(() => m.classList.remove(kind), 1000);
         }
     }
 
-    showMultiplayer() {
-        document.getElementById('multiplayer-modal').classList.add('active');
-        document.getElementById('multiplayer-modal').classList.remove('hidden');
-        document.getElementById('mp-home').classList.remove('hidden');
-        document.getElementById('mp-room').classList.add('hidden');
-        document.getElementById('mp-error').textContent = '';
-    }
+    /* ==========================================================
+       Aplicación
+       ========================================================== */
+    class App {
+        constructor() {
+            this.user = api.getCurrentUser();
+            if (!this.user) { location.href = 'login.html'; return; }
 
-    async createRoom() {
-        try {
-            const room = await api.createRoom(this.user.id, this.user.username);
-            this.room = room;
-            this.isHost = true;
-            this.myColor = 'red';
-            this.playerNames = { red: this.user.username, yellow: null };
-            
-            document.getElementById('room-code').textContent = room.room_code;
-            document.getElementById('mp-home').classList.add('hidden');
-            document.getElementById('mp-room').classList.remove('hidden');
-            document.getElementById('mp-status').innerHTML = `
-                <div>🎨 Tú: <strong style="color: var(--red1)">Rojo</strong></div>
-                <div style="margin-top: 8px; color: var(--yellow1)">Esperando a jugador amarillo...</div>
-            `;
-            document.getElementById('mp-status').className = 'mp-status waiting';
-            
-            this.listenToRoom(room.room_code);
-        } catch (err) {
-            document.getElementById('mp-error').textContent = err.message;
-        }
-    }
+            window.fx = new Particles($('fx'));
+            this.view = new BoardView();
+            this.settings = this.loadSettings();
+            this.score = { red: 0, yellow: 0 };
+            this.state = null;
+            this.started = false;
+            this.busy = false;
+            this.armed = null;
+            this.hoverCol = null;
+            this.starter = 'red';
+            this.mp = null;
+            this.saved = false;
 
-    async joinRoom() {
-        const code = document.getElementById('join-code-input').value.trim().toUpperCase();
-        if (!code || code.length !== 6) {
-            document.getElementById('mp-error').textContent = 'Código inválido (6 caracteres)';
-            return;
+            this.buildStatic();
+            this.bind();
+            this.loadUser();
+
+            // tablero de muestra mientras eliges
+            this.state = E.createState({ rows: this.settings.rows, cols: this.settings.cols, map: 'classic', events: false });
+            this.view.setup(this.state);
+            this.updateUI();
+            requestAnimationFrame(() => this.openSetup());
         }
 
-        try {
-            document.getElementById('room-code').textContent = code;
-            document.getElementById('mp-home').classList.add('hidden');
-            document.getElementById('mp-room').classList.remove('hidden');
-            document.getElementById('mp-status').innerHTML = 'Conectando...';
-            document.getElementById('mp-status').className = 'mp-status waiting';
-            
-            this.listenToRoom(code);
-            
-            const room = await api.joinRoom(code, this.user.id, this.user.username);
-            this.room = room;
-            this.isHost = false;
-            this.myColor = 'yellow';
-            this.playerNames = { red: room.host_name || 'Jugador Rojo', yellow: this.user.username };
-            
-            document.getElementById('mp-status').innerHTML = `
-                <div>🎨 Tú: <strong style="color: var(--yellow1)">Amarillo</strong></div>
-                <div style="margin-top: 8px; color: var(--red1)">Esperando al rojo...</div>
-            `;
-            document.getElementById('mp-status').className = 'mp-status connected';
-            document.getElementById('mp-status').innerHTML = `
-                <div>🎨 Tú: <strong style="color: var(--yellow1)">Amarillo</strong></div>
-                <div style="margin-top: 8px; color: var(--muted)">Esperando inicio...</div>
-            `;
-            
-            setTimeout(async () => {
-                await this.startMultiplayerGame();
-                this.closeMultiplayerModal();
-            }, 1000);
-        } catch (err) {
-            document.getElementById('mp-error').textContent = err.message;
-            document.getElementById('mp-status').innerHTML = 'Error al conectar';
-        }
-    }
+        /* ---------- ajustes ---------- */
 
-    async listenToRoom(roomCode) {
-        const subscription = api.subscribeToRoom(roomCode, async (payload) => {
-            const room = payload.new;
-            console.log('Room update:', room);
-            
-            if (room.status === 'playing' && room.guest_name) {
-                this.room = room;
-                this.playerNames = { 
-                    red: room.host_name || 'Jugador Rojo', 
-                    yellow: room.guest_name || 'Jugador Amarillo' 
+        loadSettings() {
+            const def = { mode: 'ai', level: 'normal', rows: 6, cols: 7, map: 'classic', events: true };
+            try { return { ...def, ...JSON.parse(localStorage.getItem('4r-settings') || '{}') }; }
+            catch (e) { return def; }
+        }
+        saveSettings() { localStorage.setItem('4r-settings', JSON.stringify(this.settings)); }
+
+        buildStatic() {
+            // mapas
+            $('maps').innerHTML = Object.entries(E.MAPS).map(([id, m]) => `
+                <label class="map-opt"><input type="radio" name="map" value="${id}"><span><b>${m.name}</b><small>${m.desc}</small></span></label>
+            `).join('');
+            // poderes en cada placa
+            document.querySelectorAll('.plaque').forEach(pl => {
+                pl.querySelector('[data-charge]').innerHTML = '<i></i>'.repeat(E.MAX_CHARGE);
+                pl.querySelector('[data-powers]').innerHTML = Object.entries(E.POWERS).map(([id, p]) => `
+                    <button type="button" class="power" data-power="${id}" title="${p.name}: ${p.desc} Cuesta ${p.cost} cargas.">
+                        <span class="p-key">${p.key}</span>
+                        <span class="p-icon" aria-hidden="true">${p.icon}</span>
+                        <span class="p-name">${p.name}</span>
+                        <span class="p-cost" aria-label="${p.cost} cargas">${'<i></i>'.repeat(p.cost)}</span>
+                    </button>`).join('');
+            });
+            $('help-powers').innerHTML = Object.values(E.POWERS).map(p => `
+                <li><span class="hp-icon">${p.icon}</span><b>${p.name}, ${p.cost} cargas</b><small>${p.desc}</small></li>
+            `).join('');
+            $('sound-btn').setAttribute('aria-pressed', String(sound.enabled));
+        }
+
+        loadUser() {
+            const u = this.user;
+            $('user-name').textContent = u.username;
+            $('user-initial').textContent = (u.username || '?')[0].toUpperCase();
+        }
+
+        /* ---------- eventos del DOM ---------- */
+
+        bind() {
+            const grid = $('grid');
+            grid.addEventListener('pointermove', ev => {
+                if (ev.pointerType === 'touch') return;
+                const { c } = this.view.cellFromEvent(ev);
+                if (c !== this.hoverCol) { this.hoverCol = c; this.updateGhost(); }
+            });
+            grid.addEventListener('pointerleave', ev => {
+                if (ev.pointerType === 'touch') return;
+                this.hoverCol = null; this.updateGhost();
+            });
+            grid.addEventListener('click', ev => {
+                const { c, r } = this.view.cellFromEvent(ev);
+                // con teclado (detail === 0) usamos la columna del botón enfocado
+                const col = ev.detail === 0 && ev.target.dataset.col ? Number(ev.target.dataset.col) : c;
+                this.hoverCol = col;
+                this.act(col, ev.detail === 0 ? null : r);
+            });
+            this.view.hits.addEventListener('focusin', ev => {
+                if (ev.target.dataset.col) { this.hoverCol = Number(ev.target.dataset.col); this.updateGhost(); }
+            });
+
+            addEventListener('keydown', ev => {
+                if (document.querySelector('dialog[open]')) return;
+                if (ev.target.matches('input')) return;
+                const k = ev.key;
+                if (k === 'ArrowLeft' || k === 'ArrowRight') {
+                    ev.preventDefault();
+                    const d = k === 'ArrowLeft' ? -1 : 1;
+                    const base = this.hoverCol ?? Math.floor(this.state.cols / 2);
+                    this.hoverCol = (base + d + this.state.cols) % this.state.cols;
+                    this.updateGhost();
+                    sound.play('hover');
+                } else if ((k === ' ' || k === 'Enter' || k === 'ArrowDown') && !ev.target.matches('button:not(.hit)')) {
+                    ev.preventDefault();
+                    if (this.hoverCol == null) { this.hoverCol = Math.floor(this.state.cols / 2); this.updateGhost(); return; }
+                    this.act(this.hoverCol, null);
+                } else if (['1', '2', '3', '4'].includes(k)) {
+                    const id = Object.keys(E.POWERS).find(p => E.POWERS[p].key === k);
+                    this.arm(id, this.humanColor());
+                } else if (k === 'Escape' && this.armed) {
+                    this.armed = null; this.updateUI();
+                }
+            });
+
+            document.querySelectorAll('.plaque').forEach(pl => {
+                pl.querySelector('[data-powers]').addEventListener('click', ev => {
+                    const b = ev.target.closest('.power');
+                    if (b) this.arm(b.dataset.power, pl.dataset.color);
+                });
+                pl.querySelector('[data-powers]').addEventListener('pointerover', ev => {
+                    const b = ev.target.closest('.power');
+                    this.previewCost(pl.dataset.color, b && !b.disabled ? E.POWERS[b.dataset.power].cost : 0);
+                });
+                pl.querySelector('[data-powers]').addEventListener('pointerleave', () => this.previewCost(pl.dataset.color, 0));
+            });
+
+            let rt;
+            addEventListener('resize', () => {
+                clearTimeout(rt);
+                rt = setTimeout(() => { this.view.layout(); if (this.state.over) this.view.markWin(this.state.winLine); this.updateGhost(); }, 120);
+            });
+
+            // botones
+            $('settings-btn').onclick = () => this.openSetup();
+            $('settings-btn-2').onclick = () => this.openSetup();
+            $('rematch-btn').onclick = () => this.rematch();
+            $('help-btn').onclick = () => $('help').showModal();
+            $('sound-btn').onclick = () => $('sound-btn').setAttribute('aria-pressed', String(sound.toggle()));
+            $('profile-btn').onclick = () => this.openProfile();
+            $('ranking-btn').onclick = () => this.openRanking();
+            $('online-btn').onclick = () => this.openOnline();
+            $('logout-btn').onclick = () => { this.leaveRoom(true); api.logout(); location.href = 'login.html'; };
+            $('save-email-btn').onclick = () => this.saveEmail();
+            $('create-room-btn').onclick = () => this.createRoom();
+            $('join-room-btn').onclick = () => this.joinRoom();
+            $('join-code-input').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); this.joinRoom(); } });
+            $('copy-code-btn').onclick = () => this.copyCode();
+            $('leave-btn').onclick = () => this.leaveRoom();
+
+            // hoja de ajustes
+            const form = $('setup-form');
+            form.addEventListener('change', () => this.syncSetupForm());
+            $('setup-cancel').onclick = () => $('setup').close('cancel');
+            form.addEventListener('submit', ev => {
+                ev.preventDefault();
+                const fd = new FormData(form);
+                const [cols, rows] = fd.get('size').split('x').map(Number);
+                this.settings = {
+                    mode: fd.get('mode'), level: fd.get('level'),
+                    rows, cols, map: fd.get('map'), events: fd.get('events') === 'on',
                 };
-                
-                if (this.isHost) {
-                    document.getElementById('mp-status').innerHTML = `
-                        <div>🎨 Tú: <strong style="color: var(--red1)">Rojo</strong></div>
-                        <div style="margin-top: 8px; color: var(--yellow1)">${room.guest_name} se unió como Amarillo!</div>
-                    `;
-                    document.getElementById('mp-status').className = 'mp-status connected';
-                    
-                    setTimeout(() => {
-                        this.closeMultiplayerModal();
-                        this.startMultiplayerGame();
-                    }, 2000);
-                } else {
-                    this.playerNames = { 
-                        red: room.host_name || 'Jugador Rojo', 
-                        yellow: room.guest_name || 'Jugador Amarillo' 
-                    };
-                }
-            }
-        });
-        
-        this.subscriptions.push(subscription);
-    }
-
-    closeMultiplayerModal() {
-        const modal = document.getElementById('multiplayer-modal');
-        modal.classList.remove('active');
-        modal.classList.add('hidden');
-    }
-
-    async startMultiplayerGame() {
-        this.isMultiplayer = true;
-        this.gameStarted = true;
-        currentPlayer = 'red';
-        
-        document.getElementById('modeSelect').value = 'pvp';
-        this.resetState();
-        this.updateBoardState();
-        
-        document.getElementById('mp-info').classList.remove('hidden');
-        document.getElementById('player-red-name').textContent = this.playerNames.red || 'Rojo';
-        document.getElementById('player-yellow-name').textContent = this.playerNames.yellow || 'Amarillo';
-        
-        const miColor = this.myColor === 'red' ? 'Rojo' : 'Amarillo';
-        this.showAnnouncement(`🎮 ¡Eres ${miColor}!`, 3000);
-        
-        this.updateTurnDisplay();
-        
-        if (this.isHost) {
-            try {
-                const game = await api.createGame(this.room.id);
-                this.gameId = game.id;
-                console.log('Game created with id:', this.gameId);
-            } catch (e) {
-                console.error('Error creating game:', e);
-            }
-        } else {
-            try {
-                await this.waitForGame();
-            } catch (e) {
-                console.error('Error waiting for game:', e);
-            }
+                this.saveSettings();
+                $('setup').close('start');
+                if (this.mp) this.leaveRoom(true);
+                this.score = { red: 0, yellow: 0 };
+                this.starter = 'red';
+                this.newGame();
+            });
+            document.addEventListener('pointerdown', () => sound.ensure(), { once: true });
         }
-        
-        console.log('Starting game listener, gameId:', this.gameId);
-        this.listenToGame();
-    }
 
-    async waitForGame() {
-        console.log('waitForGame started, room.id:', this.room?.id);
-        
-        while (!this.gameId) {
-            try {
-                const game = await api.getGame(this.room.id);
-                if (game && game.id) {
-                    this.gameId = game.id;
-                    console.log('Game found with id:', this.gameId);
-                    
-                    if (game.board_state) {
-                        let boardData = game.board_state;
-                        if (typeof boardData === 'string') {
-                            boardData = JSON.parse(boardData);
-                        }
-                        if (boardData) {
-                            this.syncBoard(boardData);
-                        }
-                    }
-                    console.log('waitForGame returning');
-                    return;
-                }
-            } catch (e) {
-                console.log('getGame error:', e);
+        /* ---------- ayudas de turno ---------- */
+
+        isHuman(color) {
+            if (this.mp) return color === this.mp.myColor;
+            if (this.settings.mode === 'ai') return color === 'red';
+            return true;
+        }
+        humanColor() {
+            if (!this.state) return null;
+            if (this.mp) return this.mp.myColor;
+            if (this.settings.mode === 'ai') return 'red';
+            return this.state.turn;
+        }
+        canAct() {
+            return this.started && !this.busy && !this.state.over && this.isHuman(this.state.turn);
+        }
+        nameOf(color) {
+            if (this.mp) return this.mp.names[color] || E.NAMES[color];
+            if (this.settings.mode === 'ai') return color === 'red' ? this.user.username : 'La IA';
+            return E.NAMES[color];
+        }
+
+        /* ---------- partida ---------- */
+
+        newGame(fromState = null) {
+            this.state = fromState || E.createState({ ...this.settings, starter: this.starter });
+            this.started = true;
+            this.busy = false;
+            this.armed = null;
+            this.saved = false;
+            $('result').classList.add('hidden');
+            this.view.setup(this.state);
+            this.updateUI();
+            sound.play('select');
+            if (this.state.map !== this.settings.map && this.settings.map === 'random' && !this.mp) {
+                this.toast(`Mapa sorteado: ${E.MAPS[this.state.map].name}`);
             }
-            
-            await new Promise(resolve => setTimeout(resolve, 500));
+            this.maybeAI();
         }
-        
-        console.log('waitForGame done, gameId:', this.gameId);
-    }
 
-    async listenToGame() {
-        console.log('listenToGame called, gameId:', this.gameId, 'roomId:', this.room?.id);
-        
-        if (this.gameSubscribed) {
-            console.log('Already subscribed to game');
-            return;
-        }
-        
-        if (!this.gameId && !this.room?.id) {
-            console.log('listenToGame: no gameId or roomId, returning');
-            return;
-        }
-        
-        this.gameSubscribed = true;
-        const gameId = this.gameId || this.room.id;
-        console.log('Subscribing to game:', gameId);
-        
-        const subscription = api.subscribeToGame(gameId, (payload) => {
-            console.log('Game update received:', payload);
-            const game = payload.new;
-            
-            if (!game) {
-                console.log('No game data in payload');
+        rematch() {
+            if (this.mp) {
+                if (!this.mp.isHost) { this.toast('El anfitrión empieza la revancha'); return; }
+                this.starter = E.other(this.starter);
+                const s = E.createState({ ...this.mp.settings, starter: this.starter });
+                s.seq = this.state.seq + 1;
+                this.newGame(s);
+                api.resetGame(this.mp.gameId, s).catch(() => this.toast('No se pudo empezar la revancha', true));
                 return;
             }
-            
-            if (this.isHost && game.id && !this.gameId) {
-                this.gameId = game.id;
+            this.starter = E.other(this.starter);
+            this.newGame();
+        }
+
+        act(col, row) {
+            if (!this.started) { this.openSetup(); return; }
+            if (!this.canAct()) {
+                if (!this.state.over && !this.busy && this.mp) this.toast('Espera a que juegue tu rival');
+                return;
             }
-            
-            if (game.board_state) {
-                let newBoard;
-                if (typeof game.board_state === 'string') {
-                    try {
-                        newBoard = JSON.parse(game.board_state);
-                    } catch (e) {
-                        console.error('Error parsing board:', e);
-                        return;
-                    }
+            if (this.armed) this.usePower(this.armed, col, row);
+            else this.drop(col);
+        }
+
+        async drop(col) {
+            const s = this.state;
+            if (s.frozen[col] > 0) { this.deny('Esa columna está congelada'); return; }
+            if (E.dropRow(s, col) === null) { this.deny('Esa columna está llena'); return; }
+            this.busy = true;
+            this.view.setGhost(null);
+            this.updateUI();
+            await this.dropSequence(col);
+            this.busy = false;
+            this.updateUI();
+            this.maybeAI();
+        }
+
+        async dropSequence(col) {
+            const s = this.state;
+            const color = s.turn;
+            E.place(s, col, color);
+            await this.view.render(s);
+
+            if (s.doubleArmed[color]) {
+                s.doubleArmed[color] = false;
+                if (E.dropRow(s, col) !== null) {
+                    await wait(60);
+                    E.place(s, col, color);
+                    await this.view.render(s);
+                }
+            }
+            s.moves++;
+            if (E.resolve(s)) return this.finish();
+
+            if (E.eventDue(s)) {
+                await this.runEvent(s.nextEvent);
+                E.scheduleEvent(s);
+                if (E.resolve(s)) return this.finish();
+            }
+
+            this.nextTurn();
+            s.seq++;
+            this.push();
+        }
+
+        nextTurn() {
+            const s = this.state;
+            E.endTurn(s);
+            let guard = 0;
+            while (!E.legalCols(s).length && guard++ < 6) {
+                this.toast(`${this.nameOf(s.turn)} no tiene dónde tirar y pasa turno`);
+                E.endTurn(s);
+            }
+            this.view.renderIce(s.frozen, true);
+            sound.play('charge');
+            const st = $('status');
+            st.classList.remove('flash'); void st.offsetWidth; st.classList.add('flash');
+        }
+
+        async runEvent(id) {
+            const ev = E.EVENTS[id];
+            await this.showHazard(ev);
+            const before = new Set();
+            this.state.cells.forEach(row => row.forEach(c => c && before.add(c.id)));
+            const info = E.applyEvent(this.state, id);
+            await this.playEventEffects(id, info);
+        }
+
+        async playEventEffects(id, info) {
+            const v = this.view;
+            if (id === 'whirlwind') { sound.play('whoosh'); v.jolt('spin'); }
+            if (id === 'quake') { sound.play('rumble'); v.jolt('shake'); navigator.vibrate?.([80, 40, 80, 40, 120]); }
+            if (id === 'flipAll') { sound.play('whoosh'); v.jolt('flip'); }
+            if (id === 'swap') { sound.play('whoosh'); }
+            if (id === 'blizzard') { sound.play('freeze'); }
+            if (id === 'gift') { sound.play('charge'); }
+            if (id === 'meteor') { sound.play('bomb'); v.jolt('shake'); navigator.vibrate?.([120, 40, 60]); }
+            const explode = new Set((info.removed || []).map(p => p.id));
+            if (id === 'meteor' && info.center) {
+                const pt = v.point(info.center[0], info.center[1]);
+                window.fx.burst(pt.x, pt.y, ['#ff9d2e', '#ffd166', '#ff4d2e', '#fff'], 50, 1.6);
+            }
+            await wait(id === 'flipAll' ? 380 : 120);
+            await v.render(this.state, { explode });
+            await wait(200);
+        }
+
+        showHazard(ev) {
+            const hz = $('hazard');
+            $('hazard-icon').textContent = ev.icon;
+            $('hazard-name').textContent = ev.name;
+            $('hazard-desc').textContent = ev.desc;
+            hz.classList.remove('hidden', 'in');
+            void hz.offsetWidth;
+            hz.classList.add('in');
+            sound.play('alarm');
+            setTimeout(() => hz.classList.add('hidden'), reduced ? 900 : 1900);
+            return wait(reduced ? 500 : 1150);
+        }
+
+        /* ---------- poderes ---------- */
+
+        arm(power, color) {
+            if (!power || !this.canAct()) return;
+            const s = this.state;
+            if (color !== s.turn) { this.deny('No es tu turno'); return; }
+            if (this.armed === power) { this.armed = null; this.updateUI(); return; }
+            if (s.powerUsedThisTurn) { this.deny('Ya usaste un poder este turno'); return; }
+            const p = E.POWERS[power];
+            if (s.charges[s.turn] < p.cost) { this.deny(`${p.name} necesita ${p.cost} cargas`); return; }
+            if (power === 'double') {
+                if (s.doubleArmed[s.turn]) { this.deny('Ya tienes la doble ficha preparada'); return; }
+                E.applyPower(s, 'double');
+                sound.play('charge');
+                this.toast('Doble ficha lista: tu próxima tirada suelta dos');
+                this.state.seq++; this.push();
+                this.updateUI();
+                return;
+            }
+            this.armed = power;
+            sound.play('select');
+            this.updateUI();
+        }
+
+        async usePower(power, col, row) {
+            const s = this.state;
+            if (power === 'bomb' && row == null) {
+                // con teclado: la ficha rival más alta de la columna
+                row = s.cells.findIndex(r => r[col] && !r[col].stone && r[col].color !== s.turn);
+                if (row < 0) row = 0;
+            }
+            const err = E.powerTargetError(s, power, row, col);
+            if (err) { this.deny(err); return; }
+            this.busy = true;
+            this.armed = null;
+            this.updateUI();
+            await this.applyPowerFx(power, row, col);
+            this.busy = false;
+            if (E.resolve(s)) { this.finish(); return; }
+            s.seq++; this.push();
+            this.updateUI();
+        }
+
+        async applyPowerFx(power, row, col) {
+            const s = this.state;
+            const res = E.applyPower(s, power, row, col);
+            const v = this.view;
+            if (power === 'bomb') {
+                sound.play('bomb');
+                navigator.vibrate?.([100, 30, 100]);
+                v.jolt('shake');
+                await v.render(s, { explode: new Set(res.removed.map(p => p.id)) });
+            } else if (power === 'flip') {
+                sound.play('whoosh');
+                await v.render(s);
+            } else if (power === 'freeze') {
+                sound.play('freeze');
+                v.renderIce(s.frozen, true);
+                await wait(300);
+            }
+        }
+
+        /* ---------- IA ---------- */
+
+        async maybeAI() {
+            const s = this.state;
+            if (this.mp || this.settings.mode !== 'ai' || s.over || this.busy || s.turn !== 'yellow') return;
+            this.busy = true;
+            this.updateUI();
+            await wait(450 + Math.random() * 350);
+            let d = E.aiDecide(s, this.settings.level);
+            if (d && d.power) {
+                this.armed = d.power;
+                this.updateUI();
+                await this.walkGhost(d.target[1], { power: d.power });
+                await wait(350);
+                if (d.power === 'double') {
+                    E.applyPower(s, 'double');
+                    sound.play('charge');
                 } else {
-                    newBoard = game.board_state;
+                    await this.applyPowerFx(d.power, d.target[0], d.target[1]);
                 }
-                
-                if (newBoard) {
-                    this.syncBoard(newBoard);
-                }
+                this.armed = null;
+                if (E.resolve(s)) { this.busy = false; this.finish(); return; }
+                this.updateUI();
+                await wait(350);
+                d = d.then != null ? { col: d.then } : E.aiDecide(s, this.settings.level);
             }
-            
-            if (game.current_turn && game.current_turn !== currentPlayer) {
-                currentPlayer = game.current_turn;
-                this.updateTurnDisplay();
-                this.updateBoardState();
-            }
-            
-            if (game.status === 'finished' && game.winner) {
-                gameOver = true;
-                const winCells = this.checkWinner(game.winner);
-                if (winCells.length) {
-                    this.markWinningCells(winCells);
-                }
-                this.showAnnouncement(`🏆 ¡${this.playerNames[game.winner]} gana!`);
-                sound.play('win');
-            }
-        });
-        
-        this.subscriptions.push(subscription);
-    }
-
-    syncBoard(newBoard) {
-        if (!newBoard || !Array.isArray(newBoard)) {
-            console.error('Invalid board data:', newBoard);
-            return;
+            if (!d) { this.busy = false; return; }
+            await this.walkGhost(d.col, { color: 'yellow' });
+            await wait(120);
+            this.view.setGhost(null);
+            await this.dropSequence(d.col);
+            this.busy = false;
+            this.updateUI();
         }
-        
-        let hasChanges = false;
-        
-        for (let r = 0; r < Math.min(newBoard.length, rows); r++) {
-            for (let c = 0; c < Math.min(newBoard[r].length, cols); c++) {
-                const cellData = newBoard[r][c];
-                const newPiece = cellData?.piece;
-                const oldPiece = board[r]?.[c]?.piece;
-                
-                if (oldPiece !== newPiece) {
-                    hasChanges = true;
-                    if (board[r]) {
-                        board[r][c] = {
-                            piece: newPiece || null,
-                            blocked: cellData?.blocked || false
-                        };
+
+        async walkGhost(target, look) {
+            const from = this.hoverCol ?? Math.floor(this.state.cols / 2);
+            const step = target > from ? 1 : -1;
+            this.view.setGhost(from, look);
+            for (let c = from; c !== target; c += step) {
+                await wait(reduced ? 20 : 90);
+                this.view.setGhost(c + step, look);
+            }
+            this.hoverCol = target;
+            await wait(150);
+        }
+
+        /* ---------- fin de partida ---------- */
+
+        finish() {
+            const s = this.state;
+            s.over = true;
+            this.busy = false;
+            this.armed = null;
+            s.seq++;
+            this.push();
+            const w = s.winner;
+            if (s.result === 'win') this.score[w]++;
+            this.view.setGhost(null);
+            this.view.markWin(s.winLine);
+            this.updateUI();
+
+            let title, sub, discClass;
+            if (s.result === 'win') {
+                const el = document.querySelector(`#plaque-${w} [data-score]`);
+                el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+                const human = this.isHuman(w);
+                const twoLocal = !this.mp && this.settings.mode === 'pvp';
+                title = this.resultTitle();
+                sub = `Cuatro en raya en ${s.moves} tiradas.`;
+                discClass = w;
+                sound.play(twoLocal || human ? 'win' : 'lose');
+                if (twoLocal || human) setTimeout(() => window.fx.confetti(PALETTE[w].concat(['#f1ebdd'])), 300);
+                navigator.vibrate?.([100, 50, 100, 50, 160]);
+            } else if (s.result === 'double') {
+                title = 'Empate brutal';
+                sub = 'El caos dejó cuatro en raya a los dos a la vez.';
+                discClass = 'both';
+                sound.play('draw');
+            } else {
+                title = 'Empate';
+                sub = 'No queda sitio en el tablero.';
+                discClass = 'none';
+                sound.play('draw');
+            }
+            $('result-title').textContent = title;
+            $('result-sub').textContent = sub;
+            $('result-disc').className = 'result-disc ' + (discClass === 'red' || discClass === 'yellow' ? 'disc ' + discClass : discClass);
+            $('rematch-btn').textContent = this.mp && !this.mp.isHost ? 'Esperando revancha' : 'Revancha';
+            $('rematch-btn').disabled = !!(this.mp && !this.mp.isHost);
+            setTimeout(() => {
+                $('result').classList.remove('hidden');
+                $('rematch-btn').focus({ preventScroll: true });
+            }, 1100);
+            this.record();
+        }
+
+        resultTitle() {
+            const s = this.state;
+            if (s.result === 'double') return 'Empate brutal';
+            if (s.result !== 'win') return 'Empate';
+            if (!this.mp && this.settings.mode === 'pvp') return `Gana ${E.NAMES[s.winner]}`;
+            if (this.isHuman(s.winner)) return 'Has ganado';
+            return this.mp ? `Gana ${this.nameOf(s.winner)}` : 'Gana la IA';
+        }
+
+        record() {
+            const s = this.state;
+            if (this.saved || this.user.guest || !api.online) return;
+            const vsAI = !this.mp && this.settings.mode === 'ai';
+            if (!vsAI && !this.mp) return; // partidas locales a dos no cuentan para el ranking
+            const me = this.mp ? this.mp.myColor : 'red';
+            const won = s.result === 'win' && s.winner === me;
+            const opponent = this.mp ? this.mp.names[E.other(me)] : `IA ${this.settings.level}`;
+            this.saved = true;
+            if (won) {
+                this.user.total_wins = (this.user.total_wins || 0) + 1;
+                this.user.total_points = (this.user.total_points || 0) + 1;
+                localStorage.setItem('user', JSON.stringify(this.user));
+            }
+            api.saveGame(this.user.username, s.map, won, opponent).catch(() => {});
+        }
+
+        /* ---------- interfaz ---------- */
+
+        deny(msg) {
+            sound.play('error');
+            this.toast(msg, true);
+            const g = this.view.ghost;
+            g.animate([{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '6px 0' }, { translate: '0 0' }], { duration: 220 });
+        }
+
+        toast(msg, error = false) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.classList.toggle('error', error);
+            t.classList.add('show');
+            clearTimeout(this._tt);
+            this._tt = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        previewCost(color, cost) {
+            const s = this.state;
+            const bars = document.querySelectorAll(`#plaque-${color} [data-charge] i`);
+            const have = s.charges[color];
+            bars.forEach((b, i) => b.classList.toggle('cost', cost > 0 && i < have && i >= have - cost));
+        }
+
+        updateGhost() {
+            const s = this.state;
+            if (!this.canAct() || this.hoverCol == null) { if (!this.busy) this.view.setGhost(null); return; }
+            const col = this.hoverCol;
+            if (this.armed) {
+                this.view.setGhost(col, { power: this.armed });
+            } else {
+                this.view.setGhost(col, { color: s.turn, blocked: !E.canDrop(s, col) });
+            }
+        }
+
+        updateUI() {
+            const s = this.state;
+            const m = $('machine');
+            m.classList.toggle('locked', !this.canAct());
+            m.classList.toggle('targeting', !!this.armed);
+
+            // placas
+            for (const color of E.COLORS) {
+                const pl = $('plaque-' + color);
+                const active = this.started && !s.over && s.turn === color;
+                pl.classList.toggle('active', active);
+                pl.classList.toggle('is-ai', !this.isHuman(color) || (this.mp && color !== this.mp.myColor));
+                pl.querySelector('[data-name]').textContent = this.nameOf(color);
+                let role;
+                if (this.mp) role = color === this.mp.myColor ? 'Tú' : 'Rival online';
+                else if (this.settings.mode === 'ai') role = color === 'red' ? 'Tú' : `Nivel ${({ easy: 'fácil', normal: 'normal', hard: 'difícil' })[this.settings.level]}`;
+                else role = color === 'red' ? 'Jugador 1' : 'Jugador 2';
+                if (active) role = this.isHuman(color) ? (this.armed ? 'Elige objetivo' : 'Le toca') : 'Pensando…';
+                if (active && s.doubleArmed[color]) role = 'Doble ficha lista';
+                pl.querySelector('[data-role]').textContent = role;
+                pl.querySelector('[data-score]').textContent = this.score[color];
+
+                const bars = pl.querySelectorAll('[data-charge] i');
+                bars.forEach((b, i) => {
+                    const on = this.started && i < s.charges[color];
+                    if (on && !b.classList.contains('on')) { b.classList.add('fresh'); setTimeout(() => b.classList.remove('fresh'), 500); }
+                    b.classList.toggle('on', on);
+                    b.classList.remove('cost');
+                });
+                pl.querySelector('[data-charge]').setAttribute('aria-label', `${s.charges[color]} de ${E.MAX_CHARGE} cargas`);
+
+                pl.querySelectorAll('.power').forEach(b => {
+                    const id = b.dataset.power;
+                    const p = E.POWERS[id];
+                    const usable = active && this.isHuman(color) && !this.busy && !s.powerUsedThisTurn && s.charges[color] >= p.cost
+                        && !(id === 'double' && s.doubleArmed[color]);
+                    b.disabled = !usable && this.armed !== id;
+                    b.classList.toggle('armed', active && (this.armed === id || (id === 'double' && s.doubleArmed[color])));
+                });
+            }
+
+            // estado
+            const disc = $('status-disc');
+            let text;
+            disc.className = 'status-disc';
+            if (!this.started) text = 'Elige cómo quieres jugar';
+            else if (s.over) text = this.resultTitle();
+            else {
+                disc.classList.add(s.turn);
+                const me = this.isHuman(s.turn);
+                if (this.armed === 'bomb') text = 'Toca una ficha rival';
+                else if (this.armed === 'flip') text = 'Elige la columna a voltear';
+                else if (this.armed === 'freeze') text = 'Elige la columna a congelar';
+                else if (this.mp) text = me ? 'Tu turno' : `Turno de ${this.nameOf(s.turn)}`;
+                else if (this.settings.mode === 'ai') text = me ? 'Tu turno' : 'La IA está pensando';
+                else text = `Turno de ${E.NAMES[s.turn]}`;
+            }
+            $('status-text').textContent = text;
+
+            // aviso de evento
+            const tk = $('ticker');
+            const pips = $('ticker-pips');
+            if (!this.started || !s.events || !s.nextEvent) {
+                tk.classList.add('off'); tk.classList.remove('imminent');
+                $('ticker-icon').textContent = '🌙';
+                $('ticker-text').textContent = this.started ? 'Eventos de caos desactivados' : 'Cada pocas tiradas ocurre un evento de caos';
+                pips.innerHTML = '';
+            } else {
+                const ev = E.EVENTS[s.nextEvent];
+                const left = Math.max(1, s.nextEventAt - s.moves);
+                tk.classList.remove('off');
+                tk.classList.toggle('imminent', left === 1 && !s.over);
+                $('ticker-icon').textContent = ev.icon;
+                $('ticker-text').textContent = left === 1 ? `${ev.name} tras la próxima tirada` : `${ev.name} dentro de ${left} tiradas`;
+                pips.innerHTML = '<i class="on"></i>'.repeat(Math.min(left, 8)) ;
+                tk.title = ev.desc;
+            }
+
+            this.view.markTargets(s, this.armed === 'bomb' ? s.turn : null);
+            this.updateGhost();
+        }
+
+        /* ---------- hojas ---------- */
+
+        openSetup() {
+            if (this.mp && !this.mp.isHost) { this.toast('En una sala online, los ajustes los elige el anfitrión'); return; }
+            const f = $('setup-form');
+            const st = this.settings;
+            f.mode.value = st.mode; f.level.value = st.level;
+            f.size.value = `${st.cols}x${st.rows}`;
+            f.map.value = st.map; f.events.checked = st.events;
+            this.syncSetupForm();
+            $('setup-cancel').hidden = !this.started;
+            $('setup').showModal();
+        }
+
+        syncSetupForm() {
+            const f = $('setup-form');
+            $('level-row').classList.toggle('off', f.mode.value !== 'ai');
+        }
+
+        openProfile() {
+            const u = this.user;
+            $('profile-name').textContent = u.username;
+            $('profile-initial').textContent = (u.username || '?')[0].toUpperCase();
+            $('profile-email').textContent = u.email || 'Sin email';
+            $('profile-wins').textContent = u.total_wins || 0;
+            $('profile-points').textContent = u.total_points || 0;
+            $('profile-email-input').value = u.email || '';
+            $('email-row').hidden = !!u.guest;
+            $('guest-note').hidden = !u.guest;
+            $('logout-btn').textContent = u.guest ? 'Salir y crear cuenta' : 'Cerrar sesión';
+            $('profile').showModal();
+        }
+
+        async saveEmail() {
+            const email = $('profile-email-input').value.trim();
+            if (!email) return;
+            try {
+                await api.updateEmail(this.user.id, email);
+                this.user.email = email;
+                $('profile-email').textContent = email;
+                this.toast('Email guardado');
+            } catch (e) {
+                this.toast('No se pudo guardar el email', true);
+            }
+        }
+
+        async openRanking() {
+            const list = $('ranking-list');
+            list.innerHTML = '<li class="msg">Cargando ranking…</li>';
+            $('ranking').showModal();
+            try {
+                const rows = await api.getRanking(20);
+                list.innerHTML = '';
+                if (!rows.length) { list.innerHTML = '<li class="msg">Aún no hay nadie en el ranking. Gana una partida contra la IA para entrar.</li>'; return; }
+                rows.forEach(p => {
+                    const li = document.createElement('li');
+                    if (p.username === this.user.username) li.classList.add('me');
+                    const n = document.createElement('span'); n.className = 'rk-name'; n.textContent = p.username;
+                    const pts = document.createElement('span'); pts.className = 'rk-pts'; pts.textContent = `${p.total_points} pts`;
+                    li.append(n, pts);
+                    list.appendChild(li);
+                });
+            } catch (e) {
+                list.innerHTML = '';
+                const li = document.createElement('li'); li.className = 'msg';
+                li.textContent = 'No se pudo cargar el ranking. Comprueba tu conexión.';
+                list.appendChild(li);
+            }
+        }
+
+        /* ==========================================================
+           Online (Supabase)
+           ========================================================== */
+
+        openOnline() {
+            $('mp-error').textContent = '';
+            const inRoom = !!this.mp;
+            $('mp-home').hidden = inRoom;
+            $('mp-room').hidden = !inRoom;
+            if (this.user.guest) {
+                $('mp-error').textContent = 'Necesitas una cuenta para jugar online. Sal desde tu perfil y crea una.';
+            } else if (!api.online) {
+                $('mp-error').textContent = 'No hay conexión con el servidor de partidas.';
+            }
+            $('online').showModal();
+        }
+
+        mpGuard() {
+            if (this.user.guest) { $('mp-error').textContent = 'Necesitas una cuenta para jugar online.'; return false; }
+            if (!api.online) { $('mp-error').textContent = 'No hay conexión con el servidor de partidas.'; return false; }
+            return true;
+        }
+
+        setMpStatus(html, ok = false) {
+            const el = $('mp-status');
+            el.innerHTML = html;
+            el.classList.toggle('ok', ok);
+        }
+
+        async createRoom() {
+            if (!this.mpGuard()) return;
+            $('mp-error').textContent = '';
+            try {
+                const room = await api.createRoom(this.user.id, this.user.username);
+                this.mp = {
+                    room, isHost: true, myColor: 'red', gameId: null, channels: [],
+                    names: { red: this.user.username, yellow: null },
+                    settings: { ...this.settings, mode: 'pvp' },
+                };
+                $('room-code').textContent = room.room_code;
+                $('mp-home').hidden = true; $('mp-room').hidden = false;
+                this.setMpStatus('Esperando a tu rival<span class="dots"></span>');
+                this.mp.channels.push(api.subscribeToRoom(room.room_code, p => this.onRoomUpdate(p.new)));
+                $('online-btn').classList.add('live');
+                $('online-btn').textContent = 'Sala ' + room.room_code;
+            } catch (e) {
+                $('mp-error').textContent = e.message || 'No se pudo crear la sala';
+            }
+        }
+
+        async joinRoom() {
+            if (!this.mpGuard()) return;
+            const code = $('join-code-input').value.trim().toUpperCase();
+            if (code.length !== 6) { $('mp-error').textContent = 'El código tiene 6 caracteres'; return; }
+            $('mp-error').textContent = '';
+            try {
+                const room = await api.joinRoom(code, this.user.id, this.user.username);
+                this.mp = {
+                    room, isHost: false, myColor: 'yellow', gameId: null, channels: [],
+                    names: { red: room.host_name || 'Rojo', yellow: this.user.username },
+                };
+                $('room-code').textContent = code;
+                $('mp-home').hidden = true; $('mp-room').hidden = false;
+                this.setMpStatus(`Conectado con ${room.host_name}. Preparando partida<span class="dots"></span>`, true);
+                this.mp.channels.push(api.subscribeToRoom(code, p => this.onRoomUpdate(p.new)));
+                $('online-btn').classList.add('live');
+                $('online-btn').textContent = 'Sala ' + code;
+
+                // espera a que el anfitrión cree la partida
+                let game = null;
+                for (let i = 0; i < 40 && !game && this.mp; i++) {
+                    game = await api.getGame(room.id).catch(() => null);
+                    if (!game) await wait(500);
+                }
+                if (!this.mp) return;
+                if (!game) throw new Error('El anfitrión no ha empezado la partida');
+                this.mp.gameId = game.id;
+                this.mp.channels.push(api.subscribeToGame(game.id, p => this.onGameUpdate(p.new)));
+                const st = this.parseState(game.board_state);
+                if (!st) throw new Error('La partida del anfitrión usa una versión antigua del juego');
+                this.score = { red: 0, yellow: 0 };
+                this.newGame(st);
+                $('online').close();
+                this.toast(`Juegas con amarillas contra ${room.host_name}`);
+            } catch (e) {
+                $('mp-error').textContent = e.message || 'No se pudo entrar en la sala';
+                if (this.mp && !this.mp.gameId) this.leaveRoom(true);
+            }
+        }
+
+        async onRoomUpdate(room) {
+            if (!room || !this.mp) return;
+            if (room.status === 'cancelled') {
+                this.toast('Tu rival ha salido de la sala', true);
+                this.leaveRoom(true, false);
+                return;
+            }
+            if (this.mp.isHost && room.status === 'playing' && room.guest_name && !this.mp.gameId) {
+                this.mp.room = room;
+                this.mp.names.yellow = room.guest_name;
+                this.setMpStatus(`${room.guest_name} ha entrado. ¡A jugar!`, true);
+                const s = E.createState({ ...this.mp.settings, starter: 'red' });
+                try {
+                    const game = await api.createGame(room.id, s);
+                    this.mp.gameId = game.id;
+                    this.mp.channels.push(api.subscribeToGame(game.id, p => this.onGameUpdate(p.new)));
+                    this.score = { red: 0, yellow: 0 };
+                    this.starter = 'red';
+                    await wait(600);
+                    $('online').open && $('online').close();
+                    this.newGame(s);
+                    this.toast(`Juegas con rojas contra ${room.guest_name}`);
+                } catch (e) {
+                    $('mp-error').textContent = 'No se pudo crear la partida';
+                }
+            }
+        }
+
+        parseState(raw) {
+            try {
+                const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                if (!obj || obj.v !== 2) return null;
+                if (obj.nextEventAt == null) obj.nextEventAt = Infinity;
+                return obj;
+            } catch (e) { return null; }
+        }
+
+        async onGameUpdate(game) {
+            if (!game || !this.mp) return;
+            const st = this.parseState(game.board_state);
+            if (!st || st.seq <= this.state.seq) return;
+            // cola para no pisar animaciones
+            this._remote = (this._remote || Promise.resolve()).then(() => this.applyRemote(st));
+        }
+
+        async applyRemote(st) {
+            if (st.seq <= this.state.seq) return;
+            const prev = this.state;
+            const fresh = st.moves === 0 && (prev.over || st.rows !== prev.rows || st.cols !== prev.cols);
+            if (fresh) { this.newGame(st); return; }
+
+            this.busy = true;
+            const evNew = st.lastEvent && (!prev.lastEvent || st.lastEvent.at > prev.lastEvent.at);
+            if (evNew) {
+                // primero mostramos la tirada del rival, luego el evento
+                const ev = E.EVENTS[st.lastEvent.id];
+                if (st.lastMove && (!prev.lastMove || st.moves !== prev.moves)) {
+                    const mid = E.clone(prev);
+                    const r = E.dropRow(mid, st.lastMove.c);
+                    if (r !== null) {
+                        mid.cells[r][st.lastMove.c] = { id: st.lastMove.id, color: st.lastMove.color };
+                        await this.view.render(mid);
                     }
                 }
+                await this.showHazard(ev);
+                this.state = st;
+                await this.playEventEffects(st.lastEvent.id, st.lastEvent.info || {});
+            } else {
+                const removed = new Set();
+                const ids = new Set();
+                st.cells.forEach(row => row.forEach(c => c && ids.add(c.id)));
+                prev.cells.forEach(row => row.forEach(c => c && !ids.has(c.id) && removed.add(c.id)));
+                if (removed.size) { sound.play('bomb'); this.view.jolt('shake'); }
+                this.state = st;
+                await this.view.render(st, { explode: removed });
             }
-        }
-        
-        if (hasChanges) {
-            console.log('Board synced:', board);
-            sound.play('drop');
-            this.renderBoard();
-            this.refreshHud();
-        }
-    }
-
-    async makeMove(col) {
-        if (this.isMultiplayer && currentPlayer !== this.myColor) {
-            this.showAnnouncement('Espera tu turno');
-            return;
-        }
-        
-        if (frozenColumns[col] > 0) {
-            this.showAnnouncement('Columna congelada');
-            return;
-        }
-        
-        const placed = this.dropPieceInColumn(col, currentPlayer);
-        if (!placed) return;
-        
-        turnCount++;
-        sound.play('drop');
-        
-        const winCells = this.checkWinner(currentPlayer);
-        if (winCells.length) {
-            gameOver = true;
-            this.markWinningCells(winCells);
-            playerPoints[currentPlayer] += 1;
-            this.savePlayerPoints();
-            sound.play('win');
-            this.showAnnouncement(`🏆 ¡${this.playerNames[currentPlayer]} gana!`);
-            
-            if (this.gameId) {
-                await api.finishGame(this.gameId, currentPlayer, board);
+            this.busy = false;
+            if (st.over) {
+                this.state.seq = st.seq - 1; // finish() vuelve a sumar
+                this.finish();
+                return;
             }
-            
-            this.onWin(currentPlayer);
-            return;
+            this.updateUI();
         }
-        
-        if (this.isBoardFull()) {
-            gameOver = true;
-            this.showAnnouncement('🤝 Empate');
-            if (this.gameId) {
-                await api.finishGame(this.gameId, null, board);
-            }
-            return;
+
+        push() {
+            if (!this.mp || !this.mp.gameId) return;
+            const s = this.state;
+            const p = s.over
+                ? api.finishGame(this.mp.gameId, s.winner, s)
+                : api.updateGame(this.mp.gameId, s);
+            Promise.resolve(p).catch(() => this.toast('Se perdió la conexión con la partida', true));
         }
-        
-        if (turnCount >= nextEventTurn) {
-            this.triggerRandomEventCountdown();
-        } else {
-            this.switchTurn();
+
+        copyCode() {
+            const code = $('room-code').textContent;
+            navigator.clipboard?.writeText(code).then(() => this.toast('Código copiado'), () => this.toast(code));
         }
-        
-        if (this.isMultiplayer && this.gameId) {
-            console.log('Sending move, gameId:', this.gameId);
-            await api.updateGame(this.gameId, board, currentPlayer);
+
+        async leaveRoom(silent = false, notify = true) {
+            if (!this.mp) return;
+            if (!silent && this.started && !this.state.over && !confirm('¿Salir de la sala? La partida en curso se cancelará.')) return;
+            const mp = this.mp;
+            this.mp = null;
+            mp.channels.forEach(ch => api.unsubscribe(ch));
+            if (notify) api.leaveRoom(mp.room.room_code).catch(() => {});
+            $('online-btn').classList.remove('live');
+            $('online-btn').textContent = 'Jugar online';
+            $('mp-home').hidden = false; $('mp-room').hidden = true;
+            $('join-code-input').value = '';
+            if ($('online').open) $('online').close();
+            if (this.started) { this.score = { red: 0, yellow: 0 }; this.newGame(); }
         }
     }
 
-    copyRoomCode() {
-        const code = document.getElementById('room-code').textContent;
-        navigator.clipboard.writeText(code).then(() => {
-            this.showAnnouncement('¡Código copiado!', 1500);
-        });
-    }
-
-    async leaveRoom() {
-        if (this.isMultiplayer) {
-            const confirmar = confirm('¿Seguro que quieres salir de la partida? Perderás el progreso.');
-            if (!confirmar) return;
-        }
-        
-        if (this.room) {
-            try {
-                await api.leaveRoom(this.room.room_code, this.user.id);
-            } catch (e) {}
-        }
-        
-        this.subscriptions.forEach(s => {
-            try { s.unsubscribe(); } catch(e) {}
-        });
-        this.subscriptions = [];
-        
-        this.room = null;
-        this.gameId = null;
-        this.isHost = false;
-        this.isMultiplayer = false;
-        this.myColor = null;
-        this.playerNames = {};
-        this.gameSubscribed = false;
-        
-        document.getElementById('mp-home').classList.remove('hidden');
-        document.getElementById('mp-room').classList.add('hidden');
-        document.getElementById('join-code-input').value = '';
-        this.closeMultiplayerModal();
-        
-        this.gameStarted = false;
-        this.createEmptyBoard();
-        this.renderBoard();
-        this.updateBoardState();
-    }
-}
-
-let playerPoints;
-let board, rows, cols, currentPlayer, gameOver, isBusy, mode, currentMap;
-let selectedPower = null;
-let turnCount = 0;
-let frozenColumns = {};
-let nextEventTurn = 0;
-let upcomingEvent = null;
-let pendingDoubleDrop = false;
-let eventScheduled = false;
-let powerUsage;
-let eventFrequency;
-
-document.addEventListener('DOMContentLoaded', () => {
-    const game = new Game();
-    playerPoints = game.loadPlayerPoints();
-});
-
-function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-}
+    const start = () => { window.app = new App(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else start();
+})();
