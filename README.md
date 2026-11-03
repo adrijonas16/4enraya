@@ -25,6 +25,8 @@ Puedes entrar con tu cuenta o pulsar **Jugar como invitado** (juego local y cont
 - **Eventos de caos:** remolino, terremoto, vuelco, meteorito, marea, ventisca y regalo. Debajo del tablero se anuncia cuál viene y en cuántas tiradas. Si un evento deja cuatro en raya a los dos, es empate.
 - **Mapas:** Clásico, Obstáculos (piedras que hacen de suelo), Glaciar (columnas congeladas), Caos (eventos cada 2–4 tiradas) y Aleatorio.
 
+Estilos de tablero: Clásico, Madera, Neón, Cristal, Noche y oro, Lava y Caramelo. Se eligen en «Estilo del tablero» y se pueden cambiar a mitad de partida.
+
 Controles: ratón o toque, o teclado (`←` `→` apuntar, `Espacio` soltar, `1`–`4` poderes, `Esc` cancelar).
 
 ## Estructura
@@ -35,6 +37,7 @@ html/login.html         acceso, registro e invitado
 html/game.html          juego
 css/variables.css       tokens de diseño y base
 css/game.css, login.css
+css/skins.css           estilos de tablero (solo variables CSS)
 fonts/                  Archivo (variable, incluida en el repo)
 js/engine.js            reglas, física, eventos, poderes e IA (sin DOM)
 js/fx.js                sonido sintetizado y partículas

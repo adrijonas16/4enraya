@@ -1,0 +1,241 @@
+/* ==========================================================
+   Estilos de tablero. Cada estilo solo cambia variables;
+   la forma del tablero es la misma para todos.
+   ========================================================== */
+
+:root {
+    --wood: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='w'><feTurbulence type='fractalNoise' baseFrequency='.006 .16' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 .22  0 0 0 0 .1  0 0 0 0 .03  0 0 0 1.6 -.45'/></filter><rect width='100%' height='100%' filter='url(%23w)'/></svg>");
+    --rock: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='r'><feTurbulence type='fractalNoise' baseFrequency='.035' numOctaves='4' seed='3'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .35  0 0 0 0 .05  0 0 0 2.2 -1.15'/></filter><rect width='100%' height='100%' filter='url(%23r)'/></svg>");
+}
+
+/* ---------- Clásico: plástico azul ---------- */
+[data-skin="clasico"] {
+    --sk-frame:
+        linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 18%),
+        linear-gradient(160deg, #3c6cf0 0%, #1f4fd8 38%, #12319a 100%);
+    --sk-plate:
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 40%),
+        linear-gradient(160deg, #3c6cf0 -20%, #1f4fd8 40%, #12319a 120%);
+    --sk-hole: #0b1d4b;
+    --sk-hole-shade: rgba(4, 12, 35, .65);
+    --sk-rim-dark: rgba(0, 10, 50, .55);
+    --sk-rim-light: rgba(160, 190, 255, .35);
+    --sk-hi: rgba(255,255,255,.35);
+    --sk-outline: rgba(10, 30, 110, .6);
+    --sk-edge: #0d2577;
+    --sk-feet: linear-gradient(180deg, #1f4fd8, #12319a);
+    --sk-glow: rgba(60, 100, 255, .35);
+}
+
+/* ---------- Madera: roble barnizado ---------- */
+[data-skin="madera"] {
+    --sk-frame:
+        linear-gradient(180deg, rgba(255,230,190,.18), rgba(255,255,255,0) 20%),
+        var(--wood),
+        linear-gradient(160deg, #c3834a 0%, #9a5a2c 45%, #6b3a18 100%);
+    --sk-plate:
+        linear-gradient(180deg, rgba(255,230,190,.1), rgba(255,255,255,0) 40%),
+        var(--wood),
+        linear-gradient(160deg, #c3834a -20%, #9a5a2c 45%, #6b3a18 120%);
+    --sk-hole: #2a160b;
+    --sk-hole-shade: rgba(15, 6, 2, .7);
+    --sk-rim-dark: rgba(40, 15, 0, .7);
+    --sk-rim-light: rgba(255, 210, 160, .35);
+    --sk-hi: rgba(255, 225, 180, .4);
+    --sk-outline: rgba(60, 25, 5, .7);
+    --sk-edge: #4a250c;
+    --sk-feet: linear-gradient(180deg, #9a5a2c, #5c3013);
+    --sk-glow: rgba(255, 160, 80, .3);
+}
+
+/* ---------- Neón: vidrio oscuro con aros de luz ---------- */
+[data-skin="neon"] {
+    --sk-frame:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0) 15%),
+        linear-gradient(160deg, #1b1830 0%, #110f22 50%, #0a0916 100%);
+    --sk-plate:
+        radial-gradient(120% 80% at 0% 0%, rgba(0, 240, 255, .08), transparent 60%),
+        radial-gradient(120% 80% at 100% 100%, rgba(255, 40, 200, .1), transparent 60%),
+        linear-gradient(160deg, #1b1830, #0d0b1c);
+    --sk-hole: #04030b;
+    --sk-hole-shade: rgba(0, 0, 0, .7);
+    --sk-rim-dark: rgba(255, 40, 200, .65);
+    --sk-rim-light: rgba(0, 240, 255, .95);
+    --sk-rim-w: 4px;
+    --sk-hi: rgba(0, 240, 255, .5);
+    --sk-outline: rgba(0, 240, 255, .55);
+    --sk-edge: #2a0f3a;
+    --sk-feet: linear-gradient(180deg, #1b1830, #0a0916);
+    --sk-glow: rgba(255, 40, 200, .4);
+    --sk-extra: 0 0 34px -4px rgba(0, 240, 255, .55), 0 0 60px -10px rgba(255, 40, 200, .45);
+}
+[data-skin="neon"] .piece.red { filter: drop-shadow(0 0 7px rgba(255, 70, 70, .95)) saturate(1.3); }
+[data-skin="neon"] .piece.yellow { filter: drop-shadow(0 0 7px rgba(255, 210, 40, .95)) saturate(1.2); }
+[data-skin="neon"] .glint::before { background: linear-gradient(100deg, transparent, rgba(0,240,255,.12) 45%, rgba(255,40,200,.2) 50%, rgba(0,240,255,.12) 55%, transparent); }
+
+/* ---------- Cristal: escarcha translúcida ---------- */
+[data-skin="cristal"] {
+    --sk-frame:
+        linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.08) 25%),
+        linear-gradient(160deg, rgba(210, 240, 255, .38), rgba(150, 200, 235, .2) 50%, rgba(120, 170, 220, .28));
+    --sk-plate:
+        linear-gradient(115deg, rgba(255,255,255,.22) 0 10%, transparent 10% 40%, rgba(255,255,255,.12) 40% 44%, transparent 44%),
+        linear-gradient(160deg, rgba(225, 245, 255, .42), rgba(170, 215, 245, .26) 60%, rgba(140, 190, 235, .34));
+    --sk-hole: rgba(8, 30, 45, .45);
+    --sk-hole-shade: rgba(5, 20, 35, .5);
+    --sk-rim-dark: rgba(30, 70, 110, .45);
+    --sk-rim-light: rgba(255, 255, 255, .85);
+    --sk-hi: rgba(255,255,255,.75);
+    --sk-outline: rgba(220, 245, 255, .6);
+    --sk-edge: rgba(120, 170, 210, .55);
+    --sk-feet: linear-gradient(180deg, rgba(210, 240, 255, .5), rgba(120, 170, 220, .4));
+    --sk-glow: rgba(180, 230, 255, .4);
+}
+[data-skin="cristal"] .frame { -webkit-backdrop-filter: blur(10px) saturate(1.3); backdrop-filter: blur(10px) saturate(1.3); }
+
+/* ---------- Noche y oro: laca negra con aros dorados ---------- */
+[data-skin="oro"] {
+    --sk-frame:
+        linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 14%),
+        linear-gradient(160deg, #2a2a30 0%, #141418 45%, #08080a 100%);
+    --sk-plate:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 35%),
+        linear-gradient(160deg, #26262c -20%, #121215 50%, #070708 120%);
+    --sk-hole: #050506;
+    --sk-hole-shade: rgba(0, 0, 0, .6);
+    --sk-rim-dark: rgba(120, 80, 10, .8);
+    --sk-rim-light: rgba(255, 214, 120, .95);
+    --sk-hi: rgba(255, 214, 120, .55);
+    --sk-outline: rgba(214, 170, 80, .75);
+    --sk-edge: #3a2a08;
+    --sk-feet: linear-gradient(180deg, #e0b45a, #8a6418);
+    --sk-glow: rgba(255, 200, 90, .32);
+}
+
+/* ---------- Lava: roca volcánica con grietas encendidas ---------- */
+[data-skin="lava"] {
+    --sk-frame:
+        var(--rock),
+        var(--noise),
+        linear-gradient(160deg, #3a302c 0%, #241c19 50%, #140f0d 100%);
+    --sk-plate:
+        var(--rock),
+        var(--noise),
+        linear-gradient(160deg, #3a302c -20%, #221a17 55%, #120d0b 120%);
+    --sk-hole: #1a0602;
+    --sk-hole-shade: rgba(255, 70, 0, .28);
+    --sk-rim-dark: rgba(0, 0, 0, .7);
+    --sk-rim-light: rgba(255, 110, 20, .9);
+    --sk-hi: rgba(255, 140, 60, .4);
+    --sk-outline: rgba(255, 90, 0, .45);
+    --sk-edge: #120a08;
+    --sk-feet: linear-gradient(180deg, #2e2420, #0f0b09);
+    --sk-glow: rgba(255, 90, 20, .5);
+    --sk-extra: 0 0 50px -12px rgba(255, 80, 0, .7);
+}
+[data-skin="lava"] .grid { animation: lava-breathe 4s ease-in-out infinite; }
+@keyframes lava-breathe { 50% { filter: brightness(1.12) saturate(1.15); } }
+
+/* ---------- Caramelo: rosa y menta ---------- */
+[data-skin="caramelo"] {
+    --sk-frame:
+        linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,0) 22%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.07) 0 14px, transparent 14px 28px),
+        linear-gradient(160deg, #ff9ccc 0%, #f06aa8 45%, #c94585 100%);
+    --sk-plate:
+        linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%),
+        linear-gradient(160deg, #ff9ccc -20%, #f06aa8 45%, #c94585 120%);
+    --sk-hole: #4b1736;
+    --sk-hole-shade: rgba(40, 5, 25, .55);
+    --sk-rim-dark: rgba(110, 20, 60, .5);
+    --sk-rim-light: rgba(160, 255, 220, .85);
+    --sk-hi: rgba(255,255,255,.6);
+    --sk-outline: rgba(150, 30, 90, .6);
+    --sk-edge: #8f2a5d;
+    --sk-feet: linear-gradient(180deg, #8ff0cf, #3fbf98);
+    --sk-glow: rgba(255, 120, 190, .4);
+}
+
+/* ==========================================================
+   Selector de estilo
+   ========================================================== */
+
+.skins {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+.skin-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 10px 12px;
+    border-radius: var(--radius-m);
+    background: rgba(241,235,221,.05);
+    text-align: center;
+    transition: background-color .15s, box-shadow .15s, transform .15s var(--ease-out);
+}
+.skin-tile:hover { background: rgba(241,235,221,.1); transform: translateY(-2px); }
+.skin-tile[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--amber); background: rgba(245,185,21,.1); }
+.skin-tile b { font-weight: 800; font-stretch: 80%; }
+.skin-tile small { display: block; font-size: 12px; color: var(--bone-dim); line-height: 1.3; }
+
+/* tablero en miniatura con el mismo sistema de variables */
+.skin-mini, .skin-mini-grid, .skin-mini-plate, .skin-mini-rims { display: block; }
+.skin-mini {
+    --p: 24px;
+    --hole: calc(var(--p) * .4);
+    position: relative;
+    padding: 6px;
+    border-radius: 10px;
+    background: var(--sk-frame);
+    box-shadow: inset 0 1px 0 var(--sk-hi), 0 0 0 1px var(--sk-outline), 0 4px 0 var(--sk-edge), 0 10px 18px -6px rgba(0,0,0,.6), var(--sk-extra, 0 0 0 transparent);
+    transform: rotate(-3deg);
+}
+.skin-tile:hover .skin-mini { transform: rotate(0deg) scale(1.05); transition: transform .25s var(--ease-spring); }
+.skin-mini-grid {
+    position: relative;
+    width: calc(var(--p) * 4);
+    height: calc(var(--p) * 3);
+    border-radius: 4px;
+    background: var(--sk-hole);
+    overflow: hidden;
+}
+.skin-mini-grid .disc {
+    --d: calc(var(--p) * .84);
+    position: absolute;
+    margin: calc(var(--p) * .08);
+}
+.skin-mini-plate, .skin-mini-rims {
+    position: absolute;
+    inset: 0;
+}
+.skin-mini-plate {
+    background: var(--sk-plate);
+    -webkit-mask: radial-gradient(circle at center, transparent var(--hole), #000 calc(var(--hole) + .6px)) 0 0 / var(--p) var(--p);
+            mask: radial-gradient(circle at center, transparent var(--hole), #000 calc(var(--hole) + .6px)) 0 0 / var(--p) var(--p);
+}
+.skin-mini-rims {
+    background:
+        radial-gradient(circle at 50% 46%, transparent calc(var(--hole) - .5px), var(--sk-rim-dark) var(--hole), transparent calc(var(--hole) + 3px)) 0 0 / var(--p) var(--p),
+        radial-gradient(circle at 50% 54%, transparent calc(var(--hole) - .5px), var(--sk-rim-light) var(--hole), transparent calc(var(--hole) + 2px)) 0 0 / var(--p) var(--p);
+}
+[data-skin="neon"] .skin-mini-grid .disc.red { filter: drop-shadow(0 0 4px rgba(255,70,70,.9)); }
+[data-skin="neon"] .skin-mini-grid .disc.yellow { filter: drop-shadow(0 0 4px rgba(255,210,40,.9)); }
+
+/* botón con el estilo actual dentro de "Nueva partida" */
+.skin-current {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: var(--radius-m);
+    background: rgba(241,235,221,.06);
+    text-align: left;
+}
+.skin-current:hover { background: rgba(241,235,221,.11); }
+.skin-current b { display: block; font-weight: 800; font-stretch: 80%; }
+.skin-current small { font-size: 12px; color: var(--bone-dim); }
+.skin-current .skin-mini { --p: 16px; padding: 4px; transform: none; }
+.skin-current-preview { display: block; flex: none; }

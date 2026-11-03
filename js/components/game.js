@@ -9,6 +9,23 @@
     const wait = ms => new Promise(res => setTimeout(res, ms));
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const sound = new Sound();
+    const SKINS = [
+        { id: 'clasico',  name: 'Clásico',     desc: 'Plástico azul de toda la vida' },
+        { id: 'madera',   name: 'Madera',      desc: 'Roble barnizado con veta' },
+        { id: 'neon',     name: 'Neón',        desc: 'Vidrio oscuro y aros de luz' },
+        { id: 'cristal',  name: 'Cristal',     desc: 'Escarcha translúcida' },
+        { id: 'oro',      name: 'Noche y oro', desc: 'Laca negra con aros dorados' },
+        { id: 'lava',     name: 'Lava',        desc: 'Roca volcánica encendida' },
+        { id: 'caramelo', name: 'Caramelo',    desc: 'Rosa chicle y menta' },
+    ];
+    const miniBoard = () => `
+        <span class="skin-mini"><span class="skin-mini-grid">
+            <i class="disc red" style="left:0;top:calc(var(--p)*2)"></i>
+            <i class="disc yellow" style="left:var(--p);top:calc(var(--p)*2)"></i>
+            <i class="disc red" style="left:var(--p);top:var(--p)"></i>
+            <i class="disc yellow" style="left:calc(var(--p)*2);top:calc(var(--p)*2)"></i>
+            <span class="skin-mini-plate"></span><span class="skin-mini-rims"></span>
+        </span></span>`;
     const PALETTE = {
         red: ['#e5342a', '#ff8a74', '#ffb3a3', '#8f150f'],
         yellow: ['#f5b915', '#ffe58a', '#fff3c2', '#a76d00'],
@@ -362,10 +379,39 @@
                         <span class="p-cost" aria-label="${p.cost} cargas">${'<i></i>'.repeat(p.cost)}</span>
                     </button>`).join('');
             });
+            // estilos de tablero
+            $('skin-list').innerHTML = SKINS.map(sk => `
+                <button type="button" class="skin-tile" data-skin-id="${sk.id}" data-skin="${sk.id}" aria-pressed="false">
+                    ${miniBoard()}
+                    <span><b>${sk.name}</b><small>${sk.desc}</small></span>
+                </button>`).join('');
+            $('skin-current-preview').innerHTML = miniBoard();
+            this.applySkin(localStorage.getItem('4r-skin') || 'clasico', false);
             $('help-powers').innerHTML = Object.values(E.POWERS).map(p => `
                 <li><span class="hp-icon">${p.icon}</span><b>${p.name}, ${p.cost} cargas</b><small>${p.desc}</small></li>
             `).join('');
             $('sound-btn').setAttribute('aria-pressed', String(sound.enabled));
+        }
+
+        applySkin(id, animate) {
+            const sk = SKINS.find(x => x.id === id) || SKINS[0];
+            $('machine').dataset.skin = sk.id;
+            $('skin-current-preview').dataset.skin = sk.id;
+            $('skin-current-name').textContent = sk.name;
+            document.querySelectorAll('.skin-tile').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.skinId === sk.id)));
+            try { localStorage.setItem('4r-skin', sk.id); } catch (e) { /* sin almacenamiento */ }
+            if (animate) {
+                sound.play('select');
+                $('frame').animate([{ transform: 'scale(.97)', filter: 'brightness(1.6)' }, { transform: 'none', filter: 'none' }], { duration: 450, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+            }
+        }
+
+        openSkins() {
+            if ($('setup').open) {
+                // abre encima de "Nueva partida" y vuelve a ella al cerrar
+                $('skins').addEventListener('close', () => { $('setup').open || $('setup').showModal(); }, { once: true });
+            }
+            $('skins').showModal();
         }
 
         loadUser() {
@@ -441,6 +487,12 @@
 
             // botones
             $('settings-btn').onclick = () => this.openSetup();
+            $('skin-btn').onclick = () => this.openSkins();
+            $('skin-open').onclick = () => this.openSkins();
+            $('skin-list').addEventListener('click', ev => {
+                const t = ev.target.closest('.skin-tile');
+                if (t) this.applySkin(t.dataset.skinId, true);
+            });
             $('settings-btn-2').onclick = () => this.openSetup();
             $('rematch-btn').onclick = () => this.rematch();
             $('help-btn').onclick = () => $('help').showModal();
@@ -603,7 +655,7 @@
             this.view.renderIce(s.frozen, true);
             sound.play('charge');
             const st = $('status');
-            st.classList.remove('flash'); void st.offsetWidth; st.classList.add('flash');
+            st.classList.remove('pulse'); void st.offsetWidth; st.classList.add('pulse');
         }
 
         async runEvent(id) {

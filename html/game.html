@@ -8,6 +8,7 @@
     <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
     <link rel="stylesheet" href="../css/game.css">
+    <link rel="stylesheet" href="../css/skins.css">
 </head>
 <body>
     <div class="scene" id="scene" aria-hidden="true">
@@ -63,7 +64,7 @@
                 <span id="status-text">Elige cómo quieres jugar</span>
             </div>
 
-            <div class="machine" id="machine">
+            <div class="machine" id="machine" data-skin="clasico">
                 <div class="rail" id="rail" aria-hidden="true">
                     <div class="ghost" id="ghost"></div>
                 </div>
@@ -114,6 +115,7 @@
 
             <div class="stage-actions">
                 <button class="btn btn-ghost btn-small" id="settings-btn">Ajustes de partida</button>
+                <button class="btn btn-ghost btn-small" id="skin-btn">Estilo del tablero</button>
                 <span class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> apuntar <kbd>Espacio</kbd> soltar <kbd>1</kbd>–<kbd>4</kbd> poderes</span>
             </div>
         </section>
@@ -166,6 +168,14 @@
                 <div class="maps" id="maps"></div>
             </fieldset>
 
+            <fieldset>
+                <legend>Estilo del tablero</legend>
+                <button type="button" class="skin-current" id="skin-open">
+                    <span class="skin-current-preview" id="skin-current-preview"></span>
+                    <span><b id="skin-current-name">Clásico</b><small>Cambiar estilo</small></span>
+                </button>
+            </fieldset>
+
             <label class="switch">
                 <input type="checkbox" name="events" checked>
                 <span class="switch-track"></span>
@@ -175,6 +185,18 @@
             <div class="sheet-actions">
                 <button type="button" class="btn btn-ghost" value="cancel" id="setup-cancel">Cancelar</button>
                 <button type="submit" class="btn btn-primary" value="start">Empezar partida</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Estilo del tablero -->
+    <dialog class="sheet" id="skins">
+        <form method="dialog">
+            <h2>Estilo del tablero</h2>
+            <p class="muted">Se aplica al momento, también a mitad de partida.</p>
+            <div class="skins" id="skin-list"></div>
+            <div class="sheet-actions">
+                <button class="btn btn-primary" value="close">Listo</button>
             </div>
         </form>
     </dialog>

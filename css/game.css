@@ -286,7 +286,7 @@
 .status-disc:empty:not(.red):not(.yellow) { display: none; }
 .status-disc.red { background: var(--red); box-shadow: 0 0 16px var(--red); }
 .status-disc.yellow { background: var(--amber); box-shadow: 0 0 16px var(--amber); }
-.status.flash .status-disc { transform: scale(1.35); }
+.status.pulse .status-disc { transform: scale(1.35); }
 
 /* ---------- máquina: carril + tablero + patas ---------- */
 
@@ -347,18 +347,17 @@
     position: relative;
     padding: var(--pad);
     border-radius: calc(var(--pitch) * .3);
-    background:
-        linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 18%),
-        linear-gradient(160deg, var(--cobalt-hi) 0%, var(--cobalt) 38%, var(--cobalt-lo) 100%);
+    background: var(--sk-frame);
     box-shadow:
-        inset 0 2px 0 rgba(255,255,255,.35),
+        inset 0 2px 0 var(--sk-hi),
         inset 2px 0 0 rgba(255,255,255,.08),
         inset 0 -4px 0 rgba(0,0,0,.25),
-        0 0 0 1px rgba(10, 30, 110, .6),
+        0 0 0 1px var(--sk-outline),
         0 30px 60px -16px rgba(0, 0, 0, .75),
-        0 6px 0 #0d2577,
-        0 0 80px -20px color-mix(in srgb, var(--mood) 70%, transparent);
-    transition: box-shadow 1.2s ease;
+        0 6px 0 var(--sk-edge),
+        0 0 80px -20px color-mix(in srgb, var(--mood) 70%, transparent),
+        var(--sk-extra, 0 0 0 transparent);
+    transition: box-shadow 1.2s ease, background .5s ease;
     z-index: 1;
 }
 
@@ -367,8 +366,8 @@
     width: calc(var(--cols) * var(--pitch));
     height: calc(var(--rows) * var(--pitch));
     background:
-        radial-gradient(circle at 50% 42%, rgba(4, 12, 35, .2), rgba(4, 12, 35, .65) 70%) 0 0 / var(--pitch) var(--pitch),
-        #0b1d4b;
+        radial-gradient(circle at 50% 42%, transparent, var(--sk-hole-shade) 70%) 0 0 / var(--pitch) var(--pitch),
+        var(--sk-hole);
     border-radius: calc(var(--pitch) * .12);
 }
 
@@ -400,7 +399,7 @@
     height: calc(var(--pitch) * 1.1);
     margin-top: calc(var(--pitch) * -.55);
     border-radius: 50%;
-    background: radial-gradient(closest-side, color-mix(in srgb, var(--mood) 40%, rgba(60, 100, 255, .35)), transparent);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--mood) 40%, var(--sk-glow)), transparent);
     filter: blur(8px);
     opacity: .7;
     transition: background 1.2s ease;
@@ -439,9 +438,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background:
-        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 40%),
-        linear-gradient(160deg, var(--cobalt-hi) -20%, var(--cobalt) 40%, var(--cobalt-lo) 120%);
+    background: var(--sk-plate);
     -webkit-mask: radial-gradient(circle at center, transparent var(--hole), #000 calc(var(--hole) + .8px)) 0 0 / var(--pitch) var(--pitch);
             mask: radial-gradient(circle at center, transparent var(--hole), #000 calc(var(--hole) + .8px)) 0 0 / var(--pitch) var(--pitch);
 }
@@ -450,8 +447,8 @@
     inset: 0;
     pointer-events: none;
     background:
-        radial-gradient(circle at 50% 46%, transparent calc(var(--hole) - .5px), rgba(0, 10, 50, .55) var(--hole), transparent calc(var(--hole) + 5px)) 0 0 / var(--pitch) var(--pitch),
-        radial-gradient(circle at 50% 54%, transparent calc(var(--hole) - .5px), rgba(160, 190, 255, .35) var(--hole), transparent calc(var(--hole) + 3px)) 0 0 / var(--pitch) var(--pitch);
+        radial-gradient(circle at 50% 46%, transparent calc(var(--hole) - .5px), var(--sk-rim-dark) var(--hole), transparent calc(var(--hole) + 5px)) 0 0 / var(--pitch) var(--pitch),
+        radial-gradient(circle at 50% 54%, transparent calc(var(--hole) - .5px), var(--sk-rim-light) var(--hole), transparent calc(var(--hole) + var(--sk-rim-w, 3px))) 0 0 / var(--pitch) var(--pitch);
 }
 
 /* columnas congeladas */
@@ -526,7 +523,7 @@
 .feet i {
     width: calc(var(--pitch) * .9);
     height: calc(var(--pitch) * .35);
-    background: linear-gradient(180deg, var(--cobalt), var(--cobalt-lo));
+    background: var(--sk-feet);
     clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
     border-radius: 4px;
     filter: drop-shadow(0 8px 6px rgba(0,0,0,.4));
