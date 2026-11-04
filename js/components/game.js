@@ -800,7 +800,7 @@
             if (E.resolve(s)) return this.finish();
 
             if (E.eventDue(s)) {
-                await this.runEvent(s.nextEvent);
+                await this.runEvent(E.rollEvent(s));
                 E.scheduleEvent(s);
                 if (E.resolve(s)) return this.finish();
             }
@@ -1146,23 +1146,19 @@
             }
             $('status-text').textContent = text;
 
-            // aviso de evento
+            // aviso de evento: solo dice si el caos está activo, nunca cuál ni cuándo
             const tk = $('ticker');
-            const pips = $('ticker-pips');
-            if (!this.started || !s.events || !s.nextEvent) {
-                tk.classList.add('off'); tk.classList.remove('imminent');
+            $('ticker-pips').innerHTML = '';
+            tk.classList.remove('imminent');
+            tk.removeAttribute('title');
+            if (!this.started || !s.events) {
+                tk.classList.add('off');
                 $('ticker-icon').textContent = '🌙';
-                $('ticker-text').textContent = this.started ? 'Eventos de caos desactivados' : 'Cada pocas tiradas ocurre un evento de caos';
-                pips.innerHTML = '';
+                $('ticker-text').textContent = this.started ? 'Eventos de caos desactivados' : 'En cualquier tirada puede pasar algo';
             } else {
-                const ev = E.EVENTS[s.nextEvent];
-                const left = Math.max(1, s.nextEventAt - s.moves);
                 tk.classList.remove('off');
-                tk.classList.toggle('imminent', left === 1 && !s.over);
-                $('ticker-icon').textContent = ev.icon;
-                $('ticker-text').textContent = left === 1 ? `${ev.name} tras la próxima tirada` : `${ev.name} dentro de ${left} tiradas`;
-                pips.innerHTML = '<i class="on"></i>'.repeat(Math.min(left, 8)) ;
-                tk.title = ev.desc;
+                $('ticker-icon').textContent = '🌀';
+                $('ticker-text').textContent = 'Caos activo: en cualquier tirada puede pasar algo';
             }
 
             this.scene.mood(!this.started ? null : s.over ? s.winner : s.turn);
