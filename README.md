@@ -39,8 +39,8 @@ La base de datos ya está preparada (columna `users.auth_id` y función `login_w
   - 🌊 Ola (3): invierte el orden de las fichas de una columna.
   - 💣 Bomba (4): destruye una ficha rival; las de encima caen.
   - ⚡ Doble (5): tu próxima tirada suelta dos fichas.
-- **Eventos de caos:** remolino, terremoto, vuelco, meteorito, marea, ventisca y regalo. Debajo del tablero se anuncia cuál viene y en cuántas tiradas. Si un evento deja cuatro en raya a los dos, es empate.
-- **Mapas:** Clásico, Obstáculos (piedras que hacen de suelo), Glaciar (columnas congeladas), Caos (eventos cada 2–4 tiradas) y Aleatorio.
+- **Eventos de caos:** remolino, terremoto, vuelco, meteorito, marea, ventisca y regalo. Llegan por sorpresa: el evento se sortea en el momento y el número de tiradas entre uno y otro también es aleatorio. Si un evento deja cuatro en raya a los dos, es empate.
+- **Mapas:** Clásico, Obstáculos (piedras que hacen de suelo), Glaciar (columnas congeladas), Caos (eventos mucho más seguidos) y Aleatorio.
 
 Estilos de tablero: Clásico, Madera, Neón, Cristal, Noche y oro, Lava y Caramelo. Se eligen en «Estilo del tablero» y se pueden cambiar a mitad de partida.
 

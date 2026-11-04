@@ -27,10 +27,10 @@
     };
 
     const MAPS = {
-        classic:   { name: 'Clásico',    desc: 'Tablero limpio. Eventos cada 5–8 tiradas.' },
+        classic:   { name: 'Clásico',    desc: 'Tablero limpio. Eventos por sorpresa.' },
         obstacles: { name: 'Obstáculos', desc: 'Piedras que hacen de suelo a mitad del tablero.' },
         frozen:    { name: 'Glaciar',    desc: 'Empiezas con columnas congeladas.' },
-        chaos:     { name: 'Caos',       desc: 'Eventos cada 2–4 tiradas.' },
+        chaos:     { name: 'Caos',       desc: 'Eventos por sorpresa, mucho más seguidos.' },
         random:    { name: 'Aleatorio',  desc: 'Uno de los anteriores, a sorteo.' },
     };
 
@@ -105,14 +105,22 @@
     }
 
     function eventGap(s) {
-        return s.map === 'chaos' ? [2, 4] : [5, 8];
+        return s.map === 'chaos' ? [1, 4] : [3, 10];
     }
 
     function scheduleEvent(s) {
         if (!s.events) { s.nextEvent = null; s.nextEventAt = Infinity; return; }
         const [a, b] = eventGap(s);
         s.nextEventAt = s.moves + rand(a, b);
-        s.nextEvent = pick(Object.keys(EVENTS));
+        s.nextEvent = null; // se sortea en el momento, nadie sabe cuál será
+    }
+
+    // Sortea el evento justo cuando ocurre, sin repetir el anterior
+    function rollEvent(s) {
+        const last = s.lastEvent && s.lastEvent.id;
+        const ids = Object.keys(EVENTS).filter(id => id !== last);
+        s.nextEvent = pick(ids);
+        return s.nextEvent;
     }
 
     const clone = s => JSON.parse(JSON.stringify(s, (k, v) => (v === Infinity ? 'Infinity' : v)),
@@ -564,6 +572,6 @@
         CONNECT, COLORS, NAMES, POWERS, EVENTS, MAPS, MAX_CHARGE,
         createState, clone, dropRow, settle, canDrop, legalCols, boardFull, place,
         findLine, resolve, powerTargetError, applyPower, applyEvent, endTurn, eventDue,
-        scheduleEvent, aiDecide, other, rand,
+        scheduleEvent, rollEvent, aiDecide, other, rand,
     };
 })(window);
