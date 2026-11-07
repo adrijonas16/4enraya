@@ -1,0 +1,6 @@
+---
+description: Reglas del proyecto 4 en Raya
+alwaysApply: true
+---
+
+Lee y sigue `AGENTS.md` en la raíz del repositorio antes de cualquier cambio. Para tareas frecuentes, sigue las recetas de `.claude/skills/` y los documentos de `docs/`.

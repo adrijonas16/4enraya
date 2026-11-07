@@ -180,8 +180,14 @@
                 rm.type = 'button';
                 rm.title = `Quitar a ${p.username} de tus amigos`;
                 rm.setAttribute('aria-label', rm.title);
+                // primer toque pide confirmación en el propio botón; el segundo quita
                 rm.onclick = async () => {
-                    if (!confirm(`¿Quitar a ${p.username} de tus amigos?`)) return;
+                    if (!rm.classList.contains('confirm')) {
+                        rm.classList.add('confirm');
+                        rm.textContent = '¿Quitar?';
+                        setTimeout(() => { rm.classList.remove('confirm'); rm.textContent = '×'; }, 3000);
+                        return;
+                    }
                     await api.removeFriend(p.friendshipId).catch(() => {});
                     this.refresh();
                 };

@@ -270,7 +270,7 @@
                 ln.style.strokeDashoffset = len;
                 this.winline.appendChild(ln);
             }
-            for (const [id, el] of this.els) {
+            for (const [, el] of this.els) {
                 if (!el.classList.contains('win') && !el.classList.contains('stone')) el.classList.add('dim');
             }
         }
@@ -380,7 +380,7 @@
                 this.timer = setTimeout(() => {
                     const p = this.pitch();
                     let max = 0;
-                    for (const [id, el] of this.els) {
+                    for (const [, el] of this.els) {
                         const delay = Math.random() * 160;
                         el.animate([{ transform: el.style.transform }, { transform: el.style.transform + ` translateY(${p * 7}px)` }],
                             { duration: 520, delay, easing: 'cubic-bezier(.5,0,1,.6)', fill: 'forwards' });
