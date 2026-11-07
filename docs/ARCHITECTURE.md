@@ -23,7 +23,17 @@
 - **BoardView**: pinta el tablero a partir del estado. Cada ficha tiene un `id` estable, así que el render compara estado viejo y nuevo y anima: las nuevas caen, las movidas se deslizan, las desaparecidas estallan.
 - **api**: único acceso a Supabase. **RoomNet**: online sin base de datos para la página de Claude.
 
-Los scripts se cargan en este orden en `html/game.html`: Supabase (CDN) → `api.js` → `scene.js` → `engine.js` → `fx.js` → `net.js` → `social.js` → `game.js`. Cada uno es una IIFE que publica su API en `window`.
+Los scripts se cargan en este orden en `html/game.html`: Supabase (`js/vendor/supabase-2.119.0.js`) → `config.js` → `consent.js` → `api.js` → `validate.js` → `scene.js` → `engine.js` → `fx.js` → `net.js` → `social.js` → `game.js`. Cada uno es una IIFE que publica su API en `window`.
+
+## Sesión
+
+Sin sesión, `App` crea una de invitado al momento (`api.loginAsGuest()`), así que la portada se ve sin pasar por ninguna pantalla de entrada. Los invitados ven el botón «Entrar» en la barra superior, que lleva a `login.html`. Con cuenta, el chip de usuario abre el perfil.
+
+## Analítica y consentimiento
+
+`consent.js` muestra el banner solo si `SITE.gaMeasurementId` tiene valor. Hasta que la persona acepta no se carga nada de Google; si rechaza o retira el permiso, se borran las cookies `_ga`. Los eventos se envían con `Analytics.track` y, sin consentimiento, se descartan.
+
+Eventos actuales: `game_start` (`mode`, `level`, `map`, `size`), `game_end` (`mode`, `result`, `moves`), `power_used` (`power`), `skin_change` (`skin`), `online_room` (`action`, `transport`), `sign_up` y `login` (`method`).
 
 ## Estado de la partida
 

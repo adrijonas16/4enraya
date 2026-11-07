@@ -3,8 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Entrar en 4 en Raya</title>
+    <meta name="description" content="Entra con Google o con tu usuario para guardar tus victorias, tener amigos y jugar online al 4 en raya.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://4enraya-steel.vercel.app/html/login.html">
     <meta name="theme-color" content="#0b2029">
-    <title>4 en Raya</title>
+    <meta name="color-scheme" content="dark">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="4 en Raya">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:title" content="Entrar en 4 en Raya">
+    <meta property="og:description" content="Entra con Google o con tu usuario para guardar tus victorias, tener amigos y jugar online al 4 en raya.">
+    <meta property="og:url" content="https://4enraya-steel.vercel.app/html/login.html">
+    <meta property="og:image" content="https://4enraya-steel.vercel.app/img/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Tablero de 4 en raya azul con fichas rojas y amarillas sobre un fondo verde azulado">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Entrar en 4 en Raya">
+    <meta name="twitter:description" content="Entra con Google o con tu usuario para guardar tus victorias, tener amigos y jugar online al 4 en raya.">
+    <meta name="twitter:image" content="https://4enraya-steel.vercel.app/img/og-image.jpg">
+
+    <link rel="icon" href="../img/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="../img/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+    <link rel="manifest" href="../site.webmanifest">
+
     <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
     <link rel="stylesheet" href="../css/login.css">
@@ -46,37 +71,57 @@
             </button>
             <div class="or"><span>o con tu usuario</span></div>
 
-            <div class="tabs" role="tablist">
-                <button class="tab active" role="tab" aria-selected="true" data-tab="login">Entrar</button>
-                <button class="tab" role="tab" aria-selected="false" data-tab="register">Crear cuenta</button>
+            <div class="tabs" role="tablist" aria-label="Entrar o crear cuenta">
+                <button class="tab active" role="tab" id="tab-login" aria-selected="true" aria-controls="login-form" data-tab="login">Entrar</button>
+                <button class="tab" role="tab" id="tab-register" aria-selected="false" aria-controls="register-form" data-tab="register" tabindex="-1">Crear cuenta</button>
             </div>
 
-            <form id="login-form" class="form active">
-                <label>Usuario o email
-                    <input type="text" id="login-email" autocomplete="username" required>
-                </label>
-                <label>Contraseña
+            <form id="login-form" class="form active" aria-labelledby="tab-login" novalidate>
+                <div class="field">
+                    <label for="login-email">Usuario o email</label>
+                    <input type="text" id="login-email" name="user" autocomplete="username" required maxlength="120" aria-describedby="login-email-err">
+                    <p class="field-error" id="login-email-err"></p>
+                </div>
+                <div class="field">
+                    <label for="login-password">Contraseña</label>
                     <span class="pw">
-                        <input type="password" id="login-password" autocomplete="current-password" required>
-                        <button type="button" class="pw-toggle" data-target="login-password">Mostrar</button>
+                        <input type="password" id="login-password" name="password" autocomplete="current-password" required maxlength="72" aria-describedby="login-password-err">
+                        <button type="button" class="pw-toggle" data-target="login-password" aria-label="Mostrar contraseña">Mostrar</button>
                     </span>
-                </label>
+                    <p class="field-error" id="login-password-err"></p>
+                </div>
                 <button type="submit" class="btn btn-primary btn-block">Entrar</button>
             </form>
 
-            <form id="register-form" class="form">
-                <label>Nombre de usuario
-                    <input type="text" id="reg-username" autocomplete="username" required maxlength="15">
-                </label>
-                <label>Email
-                    <input type="email" id="reg-email" autocomplete="email" required>
-                </label>
-                <label>Contraseña <small>mínimo 4 caracteres</small>
+            <form id="register-form" class="form" aria-labelledby="tab-register" novalidate>
+                <div class="field">
+                    <label for="reg-username">Nombre de usuario <small>3 a 15 letras, números o _</small></label>
+                    <input type="text" id="reg-username" name="username" autocomplete="username" required minlength="3" maxlength="15" pattern="[A-Za-z0-9_ÁÉÍÓÚáéíóúÑñÜü]{3,15}" aria-describedby="reg-username-err">
+                    <p class="field-error" id="reg-username-err"></p>
+                </div>
+                <div class="field">
+                    <label for="reg-email">Email</label>
+                    <input type="email" id="reg-email" name="email" autocomplete="email" required maxlength="120" aria-describedby="reg-email-err">
+                    <p class="field-error" id="reg-email-err"></p>
+                </div>
+                <div class="field">
+                    <label for="reg-password">Contraseña <small>mínimo 8 caracteres</small></label>
                     <span class="pw">
-                        <input type="password" id="reg-password" autocomplete="new-password" required minlength="4">
-                        <button type="button" class="pw-toggle" data-target="reg-password">Mostrar</button>
+                        <input type="password" id="reg-password" name="new-password" autocomplete="new-password" required minlength="8" maxlength="72" aria-describedby="reg-password-err">
+                        <button type="button" class="pw-toggle" data-target="reg-password" aria-label="Mostrar contraseña">Mostrar</button>
                     </span>
+                    <p class="field-error" id="reg-password-err"></p>
+                </div>
+                <!-- trampa para robots: las personas no ven ni rellenan este campo -->
+                <div class="hp" aria-hidden="true">
+                    <label for="reg-website">Deja este campo vacío</label>
+                    <input type="text" id="reg-website" name="website" tabindex="-1" autocomplete="off">
+                </div>
+                <label class="check">
+                    <input type="checkbox" id="reg-terms" required aria-describedby="reg-terms-err">
+                    <span>Acepto los <a href="terminos.html">términos</a> y la <a href="privacidad.html">política de privacidad</a></span>
                 </label>
+                <p class="field-error" id="reg-terms-err"></p>
                 <button type="submit" class="btn btn-primary btn-block">Crear cuenta</button>
             </form>
 
@@ -84,15 +129,24 @@
             <p id="login-success" class="success-msg" role="status"></p>
 
             <div class="or"><span>o</span></div>
-            <button type="button" class="btn btn-ghost btn-block" id="guest-btn">Jugar como invitado</button>
-            <p class="guest-note">Como invitado juegas en local y contra la IA. Para el ranking y las salas online necesitas cuenta.</p>
+            <a class="btn btn-ghost btn-block" id="guest-btn" href="game.html">Jugar sin cuenta</a>
+            <p class="guest-note">Sin cuenta puedes jugar contra la IA y con alguien en el mismo dispositivo. Con cuenta guardas tus victorias, tienes amigos y juegas online.</p>
         </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <footer class="site-footer">
+        <a href="privacidad.html">Privacidad</a>
+        <a href="terminos.html">Términos</a>
+        <button type="button" class="link-btn" data-cookie-prefs>Preferencias de cookies</button>
+        <a href="https://github.com/adrijonas16/4enraya" rel="noopener">Código en GitHub</a>
+    </footer>
+
+    <script src="../js/vendor/supabase-2.119.0.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/consent.js"></script>
     <script src="../js/utils/api.js"></script>
+    <script src="../js/utils/validate.js"></script>
     <script src="../js/scene.js"></script>
     <script src="../js/components/login.js"></script>
-    <script>new Scene(document.getElementById('scene'));</script>
 </body>
 </html>

@@ -26,6 +26,24 @@ Realtime publica: `users`, `rooms`, `games`, `friendships`, `game_invites`.
 | `update_ranking(user_id, username)` | Recalcula la fila de `rankings` |
 | `login_with_auth()` | Tras entrar con Google: devuelve el jugador enlazado o lo crea (o enlaza por email). Solo rol `authenticated` |
 | `generate_room_code()` | Sin uso en el cliente actual |
+| `enforce_rate_limit()` | Trigger: máximo de filas por autor y ventana de tiempo. Lanza `rate_limited`, que `api.js` traduce a «Vas muy rápido…» |
+
+## Validación y límites (migración `20261107170000_validation_and_rate_limits`)
+
+| Regla | Dónde |
+| --- | --- |
+| Usuario de 3 a 20 letras, números o `_` (la web pide 3 a 15) | `users_username_format` |
+| Email con formato válido y como mucho 120 caracteres | `users_email_format` |
+| Código de sala de 6 mayúsculas o números | `rooms_room_code_format`, `game_invites_room_code_format` |
+| Como mucho 20 salas por anfitrión cada 10 minutos | trigger `rooms_rate_limit` |
+| Como mucho 30 solicitudes de amistad por persona cada hora | trigger `friendships_rate_limit` |
+| Como mucho 15 retos por persona cada 10 minutos | trigger `game_invites_rate_limit` |
+
+Las mismas reglas de formato están en `js/utils/validate.js`; si cambias una, cambia las dos.
+
+Límites conocidos: no hay límite de altas de cuentas (uno global dejaría bloquear el registro de todos); irá en una función de registro cuando las contraseñas pasen a Supabase Auth. Y mientras no haya RLS, el autor de cada fila lo indica el cliente, así que estos límites frenan abusos desde la web pero no a quien llame a la API directamente.
+
+`20261107171000_login_with_auth_min_length`: los nombres generados al entrar con Google tienen al menos 3 caracteres.
 
 ## Migraciones
 

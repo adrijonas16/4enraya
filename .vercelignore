@@ -1,0 +1,20 @@
+# Lo que no forma parte de la web publicada
+node_modules
+tests
+scripts
+supabase
+docs
+.github
+.claude
+.cursor
+dist-artifact
+test-results
+playwright-report
+AGENTS.md
+CLAUDE.md
+CONTRIBUTING.md
+eslint.config.js
+playwright.config.js
+package.json
+package-lock.json
+.editorconfig

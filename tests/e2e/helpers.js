@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 
 export const FAKE_SUPABASE = readFileSync(new URL('../fakes/fake-supabase.js', import.meta.url), 'utf8');
 export const FAKE_ROOM = readFileSync(new URL('../fakes/fake-room.js', import.meta.url), 'utf8');
-const CDN = /cdn\.jsdelivr\.net\/npm\/@supabase/;
+// la librería de Supabase se sirve desde el propio sitio (js/vendor/)
+const CDN = /\/js\/vendor\/supabase-[^/]+\.js$/;
 
 /** Sin red hacia Supabase: el juego funciona como invitado. */
 export async function offline(context) {

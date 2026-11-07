@@ -13,18 +13,28 @@ Un 4 en raya para navegador con poderes, eventos de caos, IA, siete estilos de t
 ## Mapa del código
 
 ```
-index.html               redirige a login o al juego
-html/login.html          entrada: Google, usuario y contraseña, invitado
-html/game.html           portada + partida + todas las hojas (dialog)
+index.html               redirige al juego (Vercel lo hace con una redirección)
+404.html                 página no encontrada (rutas absolutas)
+html/game.html           portada + partida + todas las hojas (dialog). Sin sesión se juega como invitado
+html/login.html          entrar o crear cuenta: Google, usuario y contraseña
+html/privacidad.html     política de privacidad
+html/terminos.html       términos y condiciones
+img/                     favicon, iconos e imagen de vista previa (se generan con scripts/make-images.mjs)
+robots.txt, sitemap.xml, site.webmanifest
 css/variables.css        tokens de diseño, base, botones, campos, escena de fondo
 css/game.css             portada, tablero, placas, hojas, amigos, responsive
 css/skins.css            estilos de tablero (solo variables --sk-*)
 css/login.css            pantalla de entrada
+js/config.js             configuración pública: URL, ID de Google Analytics, contacto, versión de la política
+js/consent.js            banner de cookies y Google Analytics (solo tras aceptar). API: Analytics.track
+js/legal.js              páginas legales: contacto montado en el navegador (antispam)
+js/utils/validate.js     validación de formularios compartida (mismas reglas que la base de datos)
 js/engine.js             reglas, física, poderes, eventos e IA. SIN DOM
 js/net.js                online por salas de la página de Claude y compresión del estado
 js/fx.js                 sonido sintetizado (WebAudio) y partículas (canvas)
 js/scene.js              fondo animado
 js/utils/api.js          acceso a Supabase. Única capa que habla con la base de datos
+js/vendor/               librerías de terceros con versión fija (supabase-js) y sus licencias
 js/components/game.js    BoardView (render y animaciones), DemoBoard, App (flujo, UI, online)
 js/components/social.js  amigos, presencia y retos
 js/components/login.js   pantalla de entrada
@@ -32,7 +42,7 @@ supabase/migrations/     historial de la base de datos (SQL)
 tests/unit/              pruebas del motor con node:test
 tests/e2e/               pruebas de extremo a extremo con Playwright
 tests/fakes/             dobles de Supabase y de la sala en tiempo real
-scripts/                 servidor local y generador de la versión para Claude
+scripts/                 servidor local, imágenes y generador de la versión para Claude
 docs/                    arquitectura, convenciones, diseño, base de datos, pruebas, publicación
 .claude/skills/          recetas paso a paso para tareas que se repiten
 ```
@@ -63,7 +73,11 @@ npm run build:artifact   # genera dist-artifact/ para la página de Claude
 8. **Diseño con tokens.** Colores, radios, tipografía y curvas de animación salen de `css/variables.css`. Un estilo de tablero nuevo solo define variables `--sk-*`. Ver `docs/DESIGN.md`.
 9. **Accesible y para móvil.** Controles con nombre accesible, foco visible, uso con teclado, `prefers-reduced-motion` respetado y sin desplazamiento horizontal a 390 px de ancho.
 10. **Textos de la interfaz en español**, en minúscula inicial, con verbos claros y sin jerga técnica. Los errores dicen qué pasó y qué hacer. Ver `docs/CONVENTIONS.md`.
-11. **No romper lo que funciona:** si un cambio toca algo que cubren las pruebas E2E, se ejecutan antes de dar el trabajo por terminado.
+11. **Privacidad primero.** Nada de analítica, cookies ni servicios de terceros nuevos sin consentimiento: los eventos se envían solo con `Analytics.track(nombre, datos)` y nunca llevan datos personales (nombres, emails, códigos de sala). Si cambia qué datos se tratan, se actualiza `html/privacidad.html` y `SITE.policyVersion` en el mismo PR.
+12. **Formularios:** se validan con `Validate` en el navegador, con mensajes por campo (`aria-invalid` + `aria-describedby`), y con la misma regla en la base de datos. Ningún formulario nuevo sin protección antispam (campo trampa, tiempo mínimo o límite de frecuencia).
+13. **Seguridad de la web:** la política de contenido (CSP) de `vercel.json` solo permite los dominios que se usan. Las librerías de terceros se sirven desde el propio sitio en `js/vendor/` con la versión en el nombre (`supabase-2.119.0.js`) y su licencia al lado; nada de CDN. Una API o servicio externo nuevo exige añadir su dominio a la CSP. Sin scripts en línea en el HTML.
+14. **SEO y vista previa:** toda página nueva lleva título (≤ 60 caracteres), descripción (50–160), `canonical`, Open Graph e iconos (copia la cabecera de una existente) y, si es pública, entra en `sitemap.xml`.
+15. **No romper lo que funciona:** si un cambio toca algo que cubren las pruebas E2E, se ejecutan antes de dar el trabajo por terminado.
 
 ## Flujo de trabajo
 
@@ -93,5 +107,7 @@ Para tareas frecuentes hay recetas paso a paso en `.claude/skills/` (las usa Cla
 | Cambiar la base de datos | `.claude/skills/cambio-base-datos/SKILL.md` |
 | Revisar la interfaz en escritorio y móvil | `.claude/skills/revisar-ui/SKILL.md` |
 | Publicar una versión | `.claude/skills/publicar/SKILL.md` |
+| Medir algo nuevo o cambiar qué datos se tratan | `.claude/skills/analitica-y-privacidad/SKILL.md` |
+| Añadir una página | `.claude/skills/agregar-pagina/SKILL.md` |
 
 Para otros asistentes hay instrucciones listas para copiar en `docs/prompts/`.

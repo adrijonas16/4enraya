@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 
 export default [
-    { ignores: ['node_modules/**', 'dist-artifact/**', 'playwright-report/**', 'test-results/**'] },
+    { ignores: ['js/vendor/**', 'node_modules/**', 'dist-artifact/**', 'playwright-report/**', 'test-results/**'] },
     js.configs.recommended,
     {
         // Código del navegador: scripts clásicos que comparten globales
@@ -15,6 +15,7 @@ export default [
                 api: 'writable', API: 'readonly',
                 Engine: 'readonly', Sound: 'readonly', Particles: 'readonly',
                 Scene: 'readonly', RoomNet: 'readonly', NetCodec: 'readonly', Social: 'readonly',
+                SITE: 'readonly', Analytics: 'readonly', Validate: 'readonly',
             },
         },
         rules: {

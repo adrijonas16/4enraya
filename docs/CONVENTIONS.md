@@ -10,7 +10,7 @@
 - **Animaciones:** Web Animations API (`el.animate`) sobre `transform` y `opacity`. Nada de animar `top`, `left`, `width`.
 - **Estado:** el estado de la partida solo cambia mediante funciones de `Engine`. La interfaz nunca edita `state.cells` directamente (la única excepción documentada es reconstruir una tirada remota en `applyRemote`).
 - **DOM:** `document.getElementById` mediante el atajo `$`. Para texto de usuarios, `textContent`. `innerHTML` solo con plantillas nuestras sin datos externos.
-- **Sin dependencias nuevas en el navegador** salvo acuerdo previo. Supabase llega por CDN.
+- **Sin dependencias nuevas en el navegador** salvo acuerdo previo. Las que hay viven en `js/vendor/` con la versión en el nombre del archivo. Para actualizar Supabase: `npm pack @supabase/supabase-js@X`, copia `dist/umd/supabase.js` a `js/vendor/supabase-X.js`, cambia las rutas en los HTML y en `tests/e2e/helpers.js` no hace falta tocar nada.
 
 ## CSS
 
@@ -26,6 +26,14 @@
 - Un único `html/game.html` con portada, partida y hojas (`<dialog>`).
 - Botones con `type="button"` salvo los de envío. Iconos sin texto con `aria-label`.
 - Ventanas modales con `<dialog>` y `showModal()`. No uses `alert`, `confirm` ni `prompt`: la página de Claude los bloquea.
+
+## Formularios
+
+- `novalidate` en el `<form>` y validación con `Validate` (`js/utils/validate.js`), para que los mensajes estén en español y sean iguales en todos los navegadores.
+- Cada campo dentro de `.field`, con `<label for>`, y un `<p class="field-error" id="…-err">` enlazado con `aria-describedby`. `Validate.mark(input, mensaje)` pone `aria-invalid` y escribe el error.
+- Valida al salir del campo y al enviar; al enviar, lleva el foco al primer campo con error.
+- Antispam: campo trampa `.hp`, tiempo mínimo desde que se muestra el formulario y bloqueo temporal tras varios fallos. En la base de datos, límites con `enforce_rate_limit`.
+- Los datos se limpian con `Validate.clean` antes de enviarlos (y los emails, en minúsculas).
 
 ## Textos de la interfaz
 

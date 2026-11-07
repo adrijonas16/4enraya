@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../../css/variables.css">
+<style>
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { display: grid; grid-template-columns: 1fr 500px; align-items: center; gap: 40px; padding: 0 80px;
+    background: radial-gradient(90% 90% at 75% 20%, #2a6a73 0%, rgba(42,106,115,0) 55%),
+                radial-gradient(70% 80% at 10% 100%, rgba(255,74,58,.35), transparent 60%),
+                linear-gradient(180deg, #0f2a35, #08161d); }
+  h1 { font-size: 150px; font-weight: 900; font-stretch: 62%; line-height: .82; color: var(--bone); }
+  p { margin-top: 22px; font-size: 32px; color: var(--bone-dim); line-height: 1.25; max-width: 15em; }
+  .pill { display: inline-block; margin-top: 30px; padding: 16px 34px; border-radius: 999px; background: var(--amber); color: var(--ink);
+    font-size: 30px; font-weight: 850; font-stretch: 80%; box-shadow: 0 6px 0 var(--amber-lo); }
+  .board { --p: 66px; position: relative; padding: 16px; border-radius: 26px; transform: rotate(-4deg);
+    background: linear-gradient(160deg, #3c6cf0, #1f4fd8 40%, #12319a);
+    box-shadow: inset 0 3px 0 rgba(255,255,255,.3), 0 10px 0 #0d2577, 0 40px 70px -20px rgba(0,0,0,.7); }
+  .grid { position: relative; width: calc(var(--p) * 7); height: calc(var(--p) * 6); background: #0b1d4b; border-radius: 8px; overflow: hidden; }
+  .grid .disc { --d: calc(var(--p) * .84); position: absolute; }
+  .plate { position: absolute; inset: 0; background: linear-gradient(160deg, #3c6cf0 -20%, #1f4fd8 40%, #12319a 120%);
+    -webkit-mask: radial-gradient(circle at center, transparent calc(var(--p)*.4), #000 calc(var(--p)*.4 + 1px)) 0 0 / var(--p) var(--p); }
+</style></head>
+<body>
+  <div>
+    <h1>4 en raya</h1>
+    <p>Poderes, eventos de caos y siete tableros. Contra la IA, con un amigo u online.</p>
+    <span class="pill">Jugar gratis</span>
+  </div>
+  <div class="board"><div class="grid" id="g"><div class="plate"></div></div></div>
+  <script>
+    const P = 66, cells = [[5,3,'red'],[5,2,'yellow'],[4,3,'red'],[5,4,'yellow'],[3,3,'red'],[4,2,'yellow'],[5,1,'red'],[2,3,'red'],[4,4,'yellow'],[5,5,'red'],[3,2,'yellow']];
+    const g = document.getElementById('g'), plate = g.querySelector('.plate');
+    cells.forEach(([r,c,col]) => { const d = document.createElement('i'); d.className = 'disc ' + col;
+      d.style.left = (c*P + P*.08) + 'px'; d.style.top = (r*P + P*.08) + 'px'; g.insertBefore(d, plate); });
+  </script>
+</body></html>
