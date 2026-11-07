@@ -545,7 +545,7 @@
         if (mustBlock.length === 1 && (level !== 'easy' || Math.random() < 0.8)) return { col: mustBlock[0] };
 
         // 4) busca la mejor columna
-        let scores = ai.choose(me, depth, allowed);
+        const scores = ai.choose(me, depth, allowed);
         scores.sort((a, b) => b.v - a.v);
         if (level === 'easy' && Math.random() < 0.35) return { col: pick(allowed) };
         const top = scores[0].v;

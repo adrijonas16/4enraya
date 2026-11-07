@@ -1,3 +1,4 @@
+/* exported api */
 /* ==========================================================
    Capa de datos (Supabase). Si Supabase no carga, el juego
    sigue funcionando en local y como invitado.
