@@ -209,6 +209,9 @@ button { cursor: pointer; background: none; border: 0; }
     white-space: nowrap;
 }
 .btn:active { transform: translateY(2px) scale(.98); }
+a.btn { text-decoration: none; }
+.doc a.btn-primary, .doc-top a.btn-primary { color: var(--ink); }
+.doc a.btn-ghost { color: var(--bone); }
 .btn:disabled { cursor: default; opacity: .55; box-shadow: none; transform: none; }
 
 .btn-primary {
@@ -285,3 +288,127 @@ input:focus { outline: none; border-color: var(--amber); background: rgba(8, 24,
         transition-duration: .01ms !important;
     }
 }
+
+/* ==========================================================
+   Piezas compartidas por todas las páginas
+   ========================================================== */
+
+/* pie con enlaces legales */
+.site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 22px;
+    padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+    font-size: var(--step--1);
+}
+.site-footer a, .site-footer .link-btn {
+    color: var(--bone-dim);
+    font-weight: 600;
+    font-size: var(--step--1);
+    text-decoration: underline;
+    text-decoration-color: rgba(241, 235, 221, .3);
+    text-underline-offset: 4px;
+}
+.site-footer a:hover, .site-footer .link-btn:hover { color: var(--bone); text-decoration-color: var(--amber); }
+
+/* banner de consentimiento: aceptar y rechazar con el mismo peso */
+.consent {
+    position: fixed;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 80;
+    width: min(560px, calc(100vw - 24px));
+    transform: translateX(-50%);
+    padding: 18px 20px;
+    border-radius: var(--radius-l);
+    background: rgba(9, 26, 34, .96);
+    box-shadow: inset 0 0 0 1px rgba(241, 235, 221, .14), 0 24px 50px -12px rgba(0, 0, 0, .8);
+    animation: consent-in .4s var(--ease-out);
+}
+@keyframes consent-in { from { opacity: 0; transform: translate(-50%, 20px); } }
+.consent h2 { font-size: var(--step-1); font-weight: 800; font-stretch: 78%; margin-bottom: 6px; }
+.consent p { font-size: var(--step--1); color: var(--bone-dim); }
+.consent a { color: var(--amber); }
+.consent-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.consent-actions .btn { flex: 1 1 140px; }
+
+/* campos de formulario */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label, .field > span:first-child { font-size: var(--step--1); font-weight: 600; color: var(--bone-dim); }
+.field-error { color: var(--danger); font-size: var(--step--1); min-height: 0; }
+.field-error:empty { display: none; }
+input[aria-invalid="true"] { border-color: var(--danger); }
+.check { display: flex; align-items: flex-start; gap: 10px; font-size: var(--step--1); color: var(--bone-dim); cursor: pointer; }
+.check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--amber); flex: none; }
+.check a { color: var(--amber); }
+/* campo trampa para robots */
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+.link-btn {
+    color: var(--bone-dim);
+    font-weight: 600;
+    font-size: var(--step--1);
+    text-decoration: underline;
+    text-decoration-color: rgba(241, 235, 221, .3);
+    text-underline-offset: 4px;
+}
+.link-btn:hover { color: var(--bone); text-decoration-color: var(--amber); }
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- páginas de texto (privacidad, términos, 404) ---------- */
+.doc-page {
+    background:
+        radial-gradient(120% 70% at 50% -10%, #1d4d58 0%, rgba(29, 77, 88, 0) 60%),
+        linear-gradient(180deg, #0f2a35 0%, #0b2029 45%, #08161d 100%);
+    background-attachment: fixed;
+}
+.doc-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 18px 20px;
+}
+.doc-top .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--bone); text-decoration: none; font-weight: 850; font-stretch: 62%; font-size: var(--step-2); }
+.doc-top .brand img { width: 30px; height: 30px; }
+.doc {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 8px 20px 40px;
+    line-height: 1.6;
+}
+.doc h1 { font-size: clamp(2.4rem, 8vw, 3.6rem); font-weight: 900; font-stretch: 62%; line-height: .95; margin-bottom: 8px; }
+.doc .updated { color: var(--bone-dim); font-size: var(--step--1); margin-bottom: 28px; }
+.doc h2 { font-size: var(--step-2); font-weight: 800; font-stretch: 75%; margin: 32px 0 8px; line-height: 1.15; }
+.doc h3 { font-size: var(--step-1); font-weight: 700; margin: 18px 0 6px; }
+.doc p, .doc li { max-width: 68ch; color: #dfe5e2; }
+.doc p + p { margin-top: 10px; }
+.doc ul { padding-left: 1.2em; margin: 8px 0; }
+.doc li + li { margin-top: 6px; }
+.doc a { color: var(--amber); }
+.doc table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: var(--step--1); }
+.doc th, .doc td { text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(241, 235, 221, .14); vertical-align: top; }
+.doc th { color: var(--bone); font-weight: 700; }
+.doc .note { padding: 14px 16px; border-radius: var(--radius-m); background: rgba(241, 235, 221, .06); }
+
+/* ---------- 404 ---------- */
+.notfound { text-align: center; padding-top: 6vh; }
+.notfound p { margin-left: auto; margin-right: auto; }
+.nf-board {
+    display: inline-flex;
+    gap: 10px;
+    padding: 14px;
+    margin-bottom: 26px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, var(--cobalt-hi), var(--cobalt) 40%, var(--cobalt-lo));
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.3), 0 6px 0 #0d2577, 0 24px 40px -12px rgba(0,0,0,.6);
+    transform: rotate(-3deg);
+}
+.nf-board .disc { --d: 48px; }
+.nf-gap { width: 48px; height: 48px; border-radius: 50%; background: #0b1d4b; box-shadow: inset 0 3px 8px rgba(0,0,0,.6); animation: nf-pulse 1.6s ease-in-out infinite; }
+@keyframes nf-pulse { 50% { box-shadow: inset 0 3px 8px rgba(0,0,0,.6), 0 0 0 4px rgba(245,185,21,.5); } }
+.nf-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 22px; }

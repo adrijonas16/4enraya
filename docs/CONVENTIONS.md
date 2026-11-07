@@ -27,6 +27,14 @@
 - Botones con `type="button"` salvo los de envío. Iconos sin texto con `aria-label`.
 - Ventanas modales con `<dialog>` y `showModal()`. No uses `alert`, `confirm` ni `prompt`: la página de Claude los bloquea.
 
+## Formularios
+
+- `novalidate` en el `<form>` y validación con `Validate` (`js/utils/validate.js`), para que los mensajes estén en español y sean iguales en todos los navegadores.
+- Cada campo dentro de `.field`, con `<label for>`, y un `<p class="field-error" id="…-err">` enlazado con `aria-describedby`. `Validate.mark(input, mensaje)` pone `aria-invalid` y escribe el error.
+- Valida al salir del campo y al enviar; al enviar, lleva el foco al primer campo con error.
+- Antispam: campo trampa `.hp`, tiempo mínimo desde que se muestra el formulario y bloqueo temporal tras varios fallos. En la base de datos, límites con `enforce_rate_limit`.
+- Los datos se limpian con `Validate.clean` antes de enviarlos (y los emails, en minúsculas).
+
 ## Textos de la interfaz
 
 - Español neutro, tuteo, **minúscula inicial** salvo nombres propios (`Nueva partida`, no `Nueva Partida`). Sin mayúsculas sostenidas.

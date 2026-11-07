@@ -34,6 +34,7 @@ Abren el juego en Chromium con un servidor local (`scripts/serve.mjs`, puerto 41
 | `game.spec.js` | Victoria y revancha, poder Bomba, eventos sin aviso |
 | `online-room.spec.js` | Dos pestañas en una sala de la página de Claude: lista de jugadores, sincronía y salida |
 | `friends.spec.js` | Solicitud, aceptar y retar a un amigo con Supabase |
+| `site.spec.js` | Accesibilidad y contraste (axe) en todas las páginas y ventanas, metadatos y vista previa, enlaces rotos, sitemap, 404, sin desplazamiento horizontal, entrada directa con CTA, banner de cookies, validación de formularios y antispam |
 
 Utilidades en `tests/e2e/helpers.js`: `offline(context)`, `fakeSupabase(context)`, `openGame(page, { user, settings, skin })`, `drop(page, col)`, `pieceCount`, `boardSignature`.
 

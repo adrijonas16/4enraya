@@ -50,9 +50,18 @@ class API {
 
         if (error) {
             if (error.code === '23505') throw new Error('Ese usuario o email ya existe');
-            throw new Error(error.message);
+            throw new Error(API.friendly(error, 'No se pudo crear la cuenta. Inténtalo de nuevo.'));
         }
         return data;
+    }
+
+    // Traduce errores de la base de datos a mensajes para la persona
+    static friendly(error, fallback) {
+        const msg = (error && (error.message || error.hint)) || '';
+        if (/rate_limited/.test(msg)) return 'Vas muy rápido. Espera unos minutos y vuelve a intentarlo.';
+        if (/users_username_format/.test(msg)) return 'Usa de 3 a 15 letras, números o _ en el nombre de usuario';
+        if (/users_email_format/.test(msg)) return 'Ese email no parece válido';
+        return fallback;
     }
 
     /* ---------- Google (Supabase Auth) ---------- */
@@ -86,7 +95,7 @@ class API {
 
     async updateEmail(userId, email) {
         const { error } = await this.db().from('users').update({ email }).eq('id', userId);
-        if (error) throw error;
+        if (error) throw new Error(error.code === '23505' ? 'Ese email ya está en uso' : API.friendly(error, 'No se pudo guardar el email'));
         const user = this.getCurrentUser();
         user.email = email;
         localStorage.setItem('user', JSON.stringify(user));
@@ -148,7 +157,7 @@ class API {
             .from('rooms')
             .insert([{ room_code: code, host_id: hostId, host_name: hostName, status: 'waiting' }])
             .select().single();
-        if (error) throw error;
+        if (error) throw new Error(API.friendly(error, 'No se pudo crear la sala'));
         return room;
     }
 
@@ -280,7 +289,7 @@ class API {
             .insert([{ requester_id: myId, addressee_id: otherId }]);
         if (error) {
             if (error.code === '23505') throw new Error('Ya son amigos o hay una solicitud pendiente');
-            throw error;
+            throw new Error(API.friendly(error, 'No se pudo enviar la solicitud. Inténtalo de nuevo.'));
         }
         return 'sent';
     }
@@ -319,7 +328,7 @@ class API {
             .eq('from_id', fromId).eq('to_id', toId).eq('status', 'pending');
         const { error } = await this.db().from('game_invites')
             .insert([{ from_id: fromId, from_name: fromName, to_id: toId, room_code: roomCode }]);
-        if (error) throw error;
+        if (error) throw new Error(API.friendly(error, 'No se pudo enviar el reto'));
     }
 
     async pendingInvites(myId) {

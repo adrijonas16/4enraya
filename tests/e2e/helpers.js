@@ -9,9 +9,16 @@ export async function offline(context) {
     await context.route(CDN, r => r.abort());
 }
 
-/** Sustituye la librería de Supabase por el doble en memoria. */
+/** Sustituye la librería de Supabase por el doble en memoria.
+ *  Las páginas fijan la librería con una huella de integridad (SRI); el doble no
+ *  coincide con ella, así que solo en pruebas se quita ese atributo del HTML. */
 export async function fakeSupabase(context) {
     await context.route(CDN, r => r.fulfill({ contentType: 'application/javascript', body: FAKE_SUPABASE }));
+    await context.route(/\/html\/[^/]+\.html/, async route => {
+        const res = await route.fetch();
+        const body = (await res.text()).replace(/ integrity="[^"]+"/g, '');
+        await route.fulfill({ response: res, body });
+    });
 }
 
 /** Abre el juego ya identificado (invitado por defecto) y con ajustes concretos. */

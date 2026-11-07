@@ -420,7 +420,8 @@
     class App {
         constructor() {
             this.user = api.getCurrentUser();
-            if (!this.user) { location.href = 'login.html'; return; }
+            // sin sesión se juega como invitado al momento; la cuenta es opcional
+            if (!this.user) this.user = api.loginAsGuest();
 
             window.fx = new Particles($('fx'));
             this.scene = new Scene($('scene'));
@@ -509,6 +510,7 @@
             document.querySelectorAll('.skin-tile').forEach(t => t.setAttribute('aria-pressed', String(t.dataset.skinId === sk.id)));
             try { localStorage.setItem('4r-skin', sk.id); } catch (e) { /* sin almacenamiento */ }
             if (animate) {
+                Analytics.track('skin_change', { skin: sk.id });
                 sound.play('select');
                 $('frame').animate([{ transform: 'scale(.97)', filter: 'brightness(1.6)' }, { transform: 'none', filter: 'none' }], { duration: 450, easing: 'cubic-bezier(.34,1.56,.64,1)' });
             }
@@ -526,6 +528,10 @@
             const u = this.user;
             $('user-name').textContent = u.username;
             $('user-initial').textContent = (u.username || '?')[0].toUpperCase();
+            // los invitados ven «Entrar» para crear cuenta o iniciar sesión
+            const guest = !!u.guest && !window.__ARTIFACT;
+            $('signin-link').hidden = !guest;
+            $('profile-btn').hidden = guest;
         }
 
         /* ---------- eventos del DOM ---------- */
@@ -661,6 +667,8 @@
             if (location.hash === '#jugar') location.hash = 'inicio';
             const midGame = this.started && !this.state.over;
             $('home-continue').hidden = !midGame;
+            const lvl = this.settings.mode === 'ai' && this.settings.level ? this.settings.level : 'normal';
+            $('hero-note').textContent = `Contra la IA en nivel ${({ easy: 'fácil', normal: 'normal', hard: 'difícil' })[lvl]}, gratis y sin registrarte`;
             $('home-hello').textContent = this.user.guest ? 'Hola' : `Hola, ${this.user.username}`;
             document.querySelectorAll('.chip[data-play]').forEach(c => c.classList.toggle('remembered', this.settings.mode === 'ai' && c.dataset.play === this.settings.level));
             const t = this.transport();
@@ -685,6 +693,7 @@
         quickPlay(kind) {
             if (kind === 'online') { this.openOnline(); return; }
             if (this.mp) this.leaveRoom(true, true, false);
+            if (kind === 'now') kind = this.settings.mode === 'ai' && this.settings.level ? this.settings.level : 'normal';
             this.settings.mode = kind === 'pvp' ? 'pvp' : 'ai';
             if (kind !== 'pvp') this.settings.level = kind;
             this.saveSettings();
@@ -738,6 +747,12 @@
             this.social && this.social.setPlaying(!!this.mp);
             this.updateUI();
             sound.play('select');
+            Analytics.track('game_start', {
+                mode: this.mp ? 'online' : this.settings.mode,
+                level: this.mp ? undefined : this.settings.level,
+                map: this.state.map,
+                size: `${this.state.cols}x${this.state.rows}`,
+            });
             if (this.state.map !== this.settings.map && this.settings.map === 'random' && !this.mp) {
                 this.toast(`Mapa sorteado: ${E.MAPS[this.state.map].name}`);
             }
@@ -877,6 +892,7 @@
             const p = E.POWERS[power];
             if (s.charges[s.turn] < p.cost) { this.deny(`${p.name} necesita ${p.cost} cargas`); return; }
             if (power === 'double') {
+                Analytics.track('power_used', { power });
                 if (s.doubleArmed[s.turn]) { this.deny('Ya tienes la doble ficha preparada'); return; }
                 E.applyPower(s, 'double');
                 sound.play('charge');
@@ -899,6 +915,7 @@
             }
             const err = E.powerTargetError(s, power, row, col);
             if (err) { this.deny(err); return; }
+            Analytics.track('power_used', { power });
             this.busy = true;
             this.armed = null;
             this.updateUI();
@@ -977,6 +994,13 @@
 
         /* ---------- fin de partida ---------- */
 
+        trackEnd() {
+            const s = this.state;
+            const mine = this.mp ? this.mp.myColor : this.settings.mode === 'ai' ? 'red' : null;
+            const result = s.result !== 'win' ? s.result : !mine ? 'win' : s.winner === mine ? 'won' : 'lost';
+            Analytics.track('game_end', { mode: this.mp ? 'online' : this.settings.mode, result, moves: s.moves });
+        }
+
         finish() {
             const s = this.state;
             s.over = true;
@@ -989,6 +1013,7 @@
             this.view.setGhost(null);
             this.view.markWin(s.winLine);
             this.updateUI();
+            this.trackEnd();
 
             let title, sub, discClass;
             if (s.result === 'win') {
@@ -1116,7 +1141,9 @@
                     b.classList.toggle('on', on);
                     b.classList.remove('cost');
                 });
-                pl.querySelector('[data-charge]').setAttribute('aria-label', `${s.charges[color]} de ${E.MAX_CHARGE} cargas`);
+                const meter = pl.querySelector('[data-charge]');
+                meter.setAttribute('aria-valuenow', String(s.charges[color]));
+                meter.setAttribute('aria-valuetext', `${s.charges[color]} de ${E.MAX_CHARGE} cargas`);
 
                 pl.querySelectorAll('.power').forEach(b => {
                     const id = b.dataset.power;
@@ -1200,15 +1227,16 @@
         }
 
         async saveEmail() {
-            const email = $('profile-email-input').value.trim();
-            if (!email) return;
+            const input = $('profile-email-input');
+            if (!Validate.mark(input, Validate.email(input.value))) { input.focus(); return; }
+            const email = Validate.clean(input.value).toLowerCase();
             try {
                 await api.updateEmail(this.user.id, email);
                 this.user.email = email;
                 $('profile-email').textContent = email;
                 this.toast('Email guardado');
             } catch (e) {
-                this.toast('No se pudo guardar el email', true);
+                Validate.mark(input, e.message || 'No se pudo guardar el email');
             }
         }
 
@@ -1317,14 +1345,19 @@
             });
         }
 
+        // devuelve false si el nombre no es válido
         saveNick() {
-            const v = $('nick-input').value.trim().slice(0, 15);
+            const input = $('nick-input');
+            const v = Validate.clean(input.value).slice(0, 15);
+            if (!Validate.mark(input, Validate.nick(v))) { input.focus(); return false; }
             try { localStorage.setItem('4r-nick', v); } catch (e) { /* */ }
             if (this.net.available) this.net.lobby({ name: this.myName() });
+            return true;
         }
 
         async createRoomNet() {
-            this.saveNick();
+            if (!this.saveNick()) return;
+            Analytics.track('online_room', { action: 'create', transport: 'room' });
             const name = this.myName();
             const code = api.generateRoomCode();
             this.mp = {
@@ -1353,7 +1386,8 @@
         }
 
         async joinRoomNet(code) {
-            this.saveNick();
+            if (!this.saveNick()) return;
+            Analytics.track('online_room', { action: 'join', transport: 'room' });
             const name = this.myName();
             this.mp = {
                 net: null, room: { room_code: code }, isHost: false, myColor: 'yellow', gameId: null, channels: [],
@@ -1476,6 +1510,7 @@
         async createRoom() {
             if (!this.mpGuard()) return;
             if (this.transport() === 'room') return this.createRoomNet();
+            Analytics.track('online_room', { action: 'create', transport: 'db' });
             $('mp-error').textContent = '';
             try {
                 const room = await api.createRoom(this.user.id, this.user.username);
@@ -1502,6 +1537,7 @@
             $('mp-error').textContent = '';
             if (this.mp) this.leaveRoom(true, true, false);
             if (this.transport() === 'room') return this.joinRoomNet(code);
+            Analytics.track('online_room', { action: 'join', transport: 'db' });
             try {
                 const room = await api.joinRoom(code, this.user.id, this.user.username);
                 this.mp = {

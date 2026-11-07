@@ -15,6 +15,7 @@ export default [
                 api: 'writable', API: 'readonly',
                 Engine: 'readonly', Sound: 'readonly', Particles: 'readonly',
                 Scene: 'readonly', RoomNet: 'readonly', NetCodec: 'readonly', Social: 'readonly',
+                SITE: 'readonly', Analytics: 'readonly', Validate: 'readonly',
             },
         },
         rules: {

@@ -3,8 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>4 en Raya: conecta cuatro con poderes y caos</title>
+    <meta name="description" content="Juega gratis al 4 en raya en tu navegador: contra la IA, con un amigo o online. Poderes, eventos de caos por sorpresa y siete tableros para elegir.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://4enraya-steel.vercel.app/html/game.html">
     <meta name="theme-color" content="#0b2029">
-    <title>4 en Raya</title>
+    <meta name="color-scheme" content="dark">
+
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="4 en Raya">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:title" content="4 en Raya: conecta cuatro con poderes y caos">
+    <meta property="og:description" content="Juega gratis al 4 en raya en tu navegador: contra la IA, con un amigo o online. Poderes, eventos de caos por sorpresa y siete tableros para elegir.">
+    <meta property="og:url" content="https://4enraya-steel.vercel.app/html/game.html">
+    <meta property="og:image" content="https://4enraya-steel.vercel.app/img/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Tablero de 4 en raya azul con fichas rojas y amarillas sobre un fondo verde azulado">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="4 en Raya: conecta cuatro con poderes y caos">
+    <meta name="twitter:description" content="Juega gratis al 4 en raya en tu navegador: contra la IA, con un amigo o online. Poderes, eventos de caos por sorpresa y siete tableros para elegir.">
+    <meta name="twitter:image" content="https://4enraya-steel.vercel.app/img/og-image.jpg">
+
+    <link rel="icon" href="../img/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="../img/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+    <link rel="manifest" href="../site.webmanifest">
+
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preload" href="../fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="../css/variables.css">
     <link rel="stylesheet" href="../css/game.css">
@@ -40,6 +66,7 @@
                 <span class="badge" id="friends-badge" hidden>0</span>
             </button>
             <button class="pill-btn" id="online-btn">Jugar online</button>
+            <a class="pill-btn signin-link" id="signin-link" href="login.html" hidden>Entrar</a>
             <button class="user-chip" id="profile-btn">
                 <span class="avatar" id="user-initial">?</span>
                 <span id="user-name">Usuario</span>
@@ -54,6 +81,12 @@
             <h1 class="home-title" id="home-title">4 en raya</h1>
             <p class="home-tag">El clásico de siempre, con poderes, hielo, terremotos y siete tableros para elegir.</p>
 
+            <div class="hero-cta">
+                <button type="button" class="btn btn-primary btn-hero" data-play="now">Jugar ahora</button>
+                <span class="hero-note" id="hero-note">Contra la IA, gratis y sin registrarte</span>
+            </div>
+
+            <h2 class="modes-title">Otras formas de jugar</h2>
             <div class="modes">
                 <div class="mode mode-ai">
                     <span class="mode-art" aria-hidden="true"><i class="disc red"></i><i class="disc yellow"></i></span>
@@ -83,6 +116,13 @@
             </div>
         </div>
 
+        <footer class="site-footer home-footer">
+            <a href="privacidad.html">Privacidad</a>
+            <a href="terminos.html">Términos</a>
+            <button type="button" class="link-btn" data-cookie-prefs>Preferencias de cookies</button>
+            <a href="https://github.com/adrijonas16/4enraya" rel="noopener">Código en GitHub</a>
+        </footer>
+
         <div class="home-demo" aria-hidden="true">
             <div class="machine demo-machine" id="demo" data-skin="clasico">
                 <div class="frame"><div class="grid"><div class="pieces" id="demo-pieces"></div><div class="plate"></div><div class="rims"></div><div class="glint"></div></div></div>
@@ -103,7 +143,7 @@
                 </div>
                 <span class="plaque-score" data-score title="Partidas ganadas en esta sesión">0</span>
             </div>
-            <div class="charge" data-charge aria-label="Cargas"></div>
+            <div class="charge" data-charge role="meter" aria-label="Cargas" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"></div>
             <div class="powers" data-powers></div>
         </section>
 
@@ -180,7 +220,7 @@
                 </div>
                 <span class="plaque-score" data-score title="Partidas ganadas en esta sesión">0</span>
             </div>
-            <div class="charge" data-charge aria-label="Cargas"></div>
+            <div class="charge" data-charge role="meter" aria-label="Cargas" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"></div>
             <div class="powers" data-powers></div>
         </section>
     </main>
@@ -284,9 +324,10 @@
                 <div><strong id="profile-points">0</strong><span>puntos</span></div>
             </div>
             <div class="field-row" id="email-row">
-                <input type="email" id="profile-email-input" placeholder="Tu email" aria-label="Email">
+                <input type="email" id="profile-email-input" placeholder="Tu email" aria-label="Email" maxlength="120" aria-describedby="profile-email-err">
                 <button type="button" class="btn btn-ghost" id="save-email-btn">Guardar email</button>
             </div>
+            <p class="field-error" id="profile-email-err"></p>
             <p class="muted small" id="guest-note" hidden>Juegas como invitado. Crea una cuenta para entrar en el ranking y jugar online.</p>
             <div class="sheet-actions">
                 <button type="button" class="btn btn-danger" id="logout-btn">Cerrar sesión</button>
@@ -314,12 +355,13 @@
                 <p class="muted">Crea una sala y pásale el código a tu rival. La partida usa tus ajustes actuales de tablero y mapa.</p>
                 <label class="field" id="nick-row" hidden>
                     <span>Tu nombre en la partida</span>
-                    <input type="text" id="nick-input" maxlength="15" autocomplete="nickname">
+                    <input type="text" id="nick-input" maxlength="15" autocomplete="nickname" aria-describedby="nick-err">
+                    <span class="field-error" id="nick-err"></span>
                 </label>
                 <button type="button" class="btn btn-primary btn-block" id="create-room-btn">Crear sala</button>
                 <div class="or"><span>o únete con un código</span></div>
                 <div class="field-row">
-                    <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6" autocomplete="off" aria-label="Código de sala">
+                    <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6" autocomplete="off" autocapitalize="characters" aria-label="Código de sala" pattern="[A-Za-z0-9]{6}">
                     <button type="button" class="btn btn-ghost" id="join-room-btn">Unirme</button>
                 </div>
             </div>
@@ -380,8 +422,11 @@
     <div class="invites" id="invites" aria-live="polite"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js" integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O" crossorigin="anonymous"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/consent.js"></script>
     <script src="../js/utils/api.js"></script>
+    <script src="../js/utils/validate.js"></script>
     <script src="../js/scene.js"></script>
     <script src="../js/engine.js"></script>
     <script src="../js/fx.js"></script>

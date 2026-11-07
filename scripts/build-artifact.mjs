@@ -6,7 +6,9 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 
 const out = 'dist-artifact';
-const CDN = '    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>\n';
+// la librería de Supabase (con su versión fijada) y la conexión anticipada al CDN
+const CDN = /^\s*<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase[^\n]*\n/m;
+const PRECONNECT = /^\s*<link rel="preconnect" href="https:\/\/cdn\.jsdelivr\.net"[^\n]*\n/m;
 const SHIM = `    <script>
         window.__ARTIFACT = true;
         try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); }
@@ -24,15 +26,12 @@ await rm(out, { recursive: true, force: true });
 await mkdir(out);
 for (const dir of ['css', 'fonts', 'js', 'html']) await cp(dir, `${out}/${dir}`, { recursive: true });
 
-const game = (await readFile('html/game.html', 'utf8')).replace(CDN, '').replace('<head>\n', `<head>\n${SHIM}`);
+const strip = html => html.replace(CDN, '').replace(PRECONNECT, '');
+const game = strip(await readFile('html/game.html', 'utf8')).replace('<head>\n', `<head>\n${SHIM}`);
 await writeFile(`${out}/html/game.html`, game);
 await writeFile(`${out}/index.html`, game.replaceAll('../', ''));
-await writeFile(`${out}/html/login.html`, (await readFile('html/login.html', 'utf8')).replace(CDN, ''));
+await writeFile(`${out}/html/login.html`, strip(await readFile('html/login.html', 'utf8')));
+await mkdir(`${out}/img`, { recursive: true });
+await cp('img', `${out}/img`, { recursive: true });
 
-const gameJs = `${out}/js/components/game.js`;
-const js = (await readFile(gameJs, 'utf8')).replace(
-    "if (!this.user) { location.href = 'login.html'; return; }",
-    "if (!this.user) { location.href = location.pathname.includes('/html/') ? 'login.html' : 'html/login.html'; return; }",
-);
-await writeFile(gameJs, js);
 console.log(`Listo: ${out}/ (publícalo con todos sus archivos; index.html es la entrada)`);

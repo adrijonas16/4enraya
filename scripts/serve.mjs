@@ -15,6 +15,7 @@ const types = {
 createServer(async (req, res) => {
     try {
         let path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
+        if (path === '/') path = '/html/game.html';
         if (path.endsWith('/')) path += 'index.html';
         const file = join(root, path);
         if (!file.startsWith(root)) throw new Error('fuera de la carpeta');
@@ -22,7 +23,8 @@ createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
         res.end(await readFile(file));
     } catch {
-        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end('No encontrado');
+        // igual que Vercel: /404.html para cualquier ruta que no exista
+        res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(await readFile(join(root, '404.html')).catch(() => 'No encontrado'));
     }
 }).listen(port, () => console.log(`4 en Raya en http://localhost:${port}`));

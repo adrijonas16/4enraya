@@ -164,3 +164,5 @@
     .tagline { margin-top: 8px; font-size: var(--step-0); }
     .panel { padding: 20px; }
 }
+.form label.check { flex-direction: row; align-items: flex-start; font-weight: 400; }
+.form .field label { gap: 2px; }
