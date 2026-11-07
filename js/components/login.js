@@ -110,8 +110,9 @@
         if (!validate(['login-email', 'login-password']) || !guard()) return;
         busy(e.target, true);
         try {
-            await api.login(Validate.clean($('login-email').value), $('login-password').value);
-            Analytics.track('login', { method: 'password' });
+            const who = Validate.clean($('login-email').value);
+            await api.login(who.includes('@') ? who.toLowerCase() : who, $('login-password').value);
+            Analytics.trackBeforeLeave('login', { method: 'password' });
             location.href = 'game.html';
         } catch (err) {
             failed(err.message);
@@ -134,7 +135,7 @@
         try {
             await api.register(username, email, pw);
             await api.login(username, pw);
-            Analytics.track('sign_up', { method: 'password' });
+            Analytics.trackBeforeLeave('sign_up', { method: 'password' });
             location.href = 'game.html';
         } catch (err) {
             failed(err.message);
@@ -165,7 +166,7 @@
         gbtn.disabled = true;
         api.finishOAuth().then(user => {
             if (user) {
-                Analytics.track('login', { method: 'google' });
+                Analytics.trackBeforeLeave('login', { method: 'google' });
                 location.replace('game.html');
                 return;
             }

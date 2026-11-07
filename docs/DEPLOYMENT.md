@@ -7,8 +7,8 @@
 - **Cada fusión en `master` se publica sola.** Las ramas y los pull requests generan versiones de prueba (protegidas con inicio de sesión de Vercel).
 - No hay paso de compilación: `vercel.json` desactiva instalación y compilación y sirve la raíz tal cual. `.vercelignore` deja fuera pruebas, scripts, documentación y migraciones.
 - `/` redirige a `/html/game.html`. Las rutas inexistentes muestran `404.html`.
-- **Cabeceras de seguridad** (en `vercel.json`, para todas las rutas): HTTPS obligatorio con HSTS, política de contenido (CSP) que solo permite este sitio, Supabase, jsDelivr y Google Analytics, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` y `Permissions-Policy`. Si añades un servicio externo, añade su dominio a la CSP.
-- Caché: fuentes un año; imágenes una semana; CSS y JS se revalidan siempre (no tienen huella en el nombre).
+- **Cabeceras de seguridad** (en `vercel.json`, para todas las rutas): HTTPS obligatorio con HSTS, política de contenido (CSP) que solo permite este sitio, Supabase y Google Analytics, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy` y `Permissions-Policy`. Si añades un servicio externo, añade su dominio a la CSP.
+- Caché: fuentes y `js/vendor/` un año; imágenes una semana; CSS y JS se revalidan siempre (no tienen huella en el nombre).
 
 Después de fusionar:
 

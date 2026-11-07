@@ -36,7 +36,13 @@
             ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied',
         });
         gtag('js', new Date());
-        gtag('config', SITE.gaMeasurementId, { allow_google_signals: false, allow_ad_personalization_signals: false });
+        // sin query ni hash: al volver de Google la URL lleva tokens con el email
+        gtag('config', SITE.gaMeasurementId, {
+            allow_google_signals: false,
+            allow_ad_personalization_signals: false,
+            page_location: location.origin + location.pathname,
+            page_referrer: document.referrer ? new URL(document.referrer).origin + new URL(document.referrer).pathname : undefined,
+        });
         const s = document.createElement('script');
         s.async = true;
         s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(SITE.gaMeasurementId);
@@ -45,6 +51,7 @@
     }
 
     function revoke() {
+        global['ga-disable-' + SITE.gaMeasurementId] = true; // corta los envíos en esta misma visita
         if (loaded && global.gtag) global.gtag('consent', 'update', { analytics_storage: 'denied' });
         // borra las cookies _ga del dominio
         document.cookie.split(';').map(c => c.trim().split('=')[0]).filter(n => /^_ga/.test(n)).forEach(n => {
@@ -54,9 +61,17 @@
         });
     }
 
-    function legalHref(page) {
-        // funciona desde /html/… y desde la raíz (404)
-        return (location.pathname.includes('/html/') ? '' : '/html/') + page;
+    // ruta absoluta: funciona desde cualquier página, también desde la 404
+    const legalHref = page => '/html/' + page;
+
+    // eventos que se envían justo antes de cambiar de página: se guardan y salen en la siguiente
+    const PENDING = '4r-pending-events';
+    function flushPending() {
+        try {
+            const list = JSON.parse(sessionStorage.getItem(PENDING) || '[]');
+            sessionStorage.removeItem(PENDING);
+            list.forEach(([n, p]) => global.Analytics.track(n, p));
+        } catch (e) { /* nada pendiente */ }
     }
 
     function showBanner() {
@@ -92,7 +107,7 @@
         });
         if (!enabled) return;
         const choice = read();
-        if (choice === 'granted') loadGA();
+        if (choice === 'granted') { loadGA(); flushPending(); }
         else if (choice === null) showBanner();
     }
 
@@ -102,6 +117,15 @@
             if (!enabled || read() !== 'granted') return;
             if (loaded && global.gtag) global.gtag('event', name, params);
             else queue.push([name, params]);
+        },
+        // para eventos justo antes de navegar a otra página
+        trackBeforeLeave(name, params = {}) {
+            if (!enabled || read() !== 'granted') return;
+            try {
+                const list = JSON.parse(sessionStorage.getItem(PENDING) || '[]');
+                list.push([name, params]);
+                sessionStorage.setItem(PENDING, JSON.stringify(list.slice(-10)));
+            } catch (e) { /* sin almacenamiento */ }
         },
         openPreferences: showBanner,
     });

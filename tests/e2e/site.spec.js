@@ -85,6 +85,18 @@ test('los botones principales tienen texto legible en todas las páginas', async
     }
 });
 
+test('nada incumple la política de seguridad de contenido (CSP)', async ({ page }) => {
+    const violations = [];
+    page.on('console', m => { if (/Content Security Policy/i.test(m.text())) violations.push(`${page.url()}: ${m.text()}`); });
+    page.on('pageerror', e => violations.push(`${page.url()}: ${e.message}`));
+    const res = await page.goto('/html/game.html');
+    expect(res.headers()['content-security-policy']).toContain("default-src 'self'");
+    await page.getByRole('button', { name: 'Jugar ahora' }).click();
+    await page.waitForTimeout(800);
+    for (const path of PAGES.slice(1)) { await page.goto(path); await page.waitForTimeout(300); }
+    expect(violations).toEqual([]);
+});
+
 test('ningún enlace ni recurso interno está roto', async ({ page, request }) => {
     const seen = new Set();
     const broken = [];

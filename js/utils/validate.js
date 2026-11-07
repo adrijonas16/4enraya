@@ -13,7 +13,7 @@
 
     // quita caracteres de control e invisibles y espacios sobrantes
     // eslint-disable-next-line no-control-regex
-    const clean = v => String(v || '').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/g, '').trim();
+    const clean = v => String(v || '').normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/g, '').trim();
 
     const Validate = {
         clean,

@@ -48,9 +48,16 @@ begin
 end;
 $$;
 
+-- Sin límite global de altas en users: dejaría que cualquiera bloquease el registro
+-- de todo el mundo. El límite de altas debe ir en una RPC de registro (pendiente,
+-- junto con mover las contraseñas a Supabase Auth).
 drop trigger if exists users_rate_limit on public.users;
-create trigger users_rate_limit before insert on public.users
-  for each row execute function public.enforce_rate_limit('*', '30', '10 minutes');
+
+-- Mientras no haya RLS, el autor (host_id, requester_id, from_id) lo indica el cliente:
+-- estos límites frenan abusos de la web, no a quien llame a la API a mano.
+create index if not exists rooms_host_created_idx on public.rooms (host_id, created_at);
+create index if not exists friendships_requester_created_idx on public.friendships (requester_id, created_at);
+create index if not exists game_invites_from_created_idx on public.game_invites (from_id, created_at);
 
 drop trigger if exists rooms_rate_limit on public.rooms;
 create trigger rooms_rate_limit before insert on public.rooms

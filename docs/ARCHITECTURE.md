@@ -23,7 +23,7 @@
 - **BoardView**: pinta el tablero a partir del estado. Cada ficha tiene un `id` estable, así que el render compara estado viejo y nuevo y anima: las nuevas caen, las movidas se deslizan, las desaparecidas estallan.
 - **api**: único acceso a Supabase. **RoomNet**: online sin base de datos para la página de Claude.
 
-Los scripts se cargan en este orden en `html/game.html`: Supabase (CDN, versión fijada con `integrity`) → `config.js` → `consent.js` → `api.js` → `validate.js` → `scene.js` → `engine.js` → `fx.js` → `net.js` → `social.js` → `game.js`. Cada uno es una IIFE que publica su API en `window`.
+Los scripts se cargan en este orden en `html/game.html`: Supabase (`js/vendor/supabase-2.119.0.js`) → `config.js` → `consent.js` → `api.js` → `validate.js` → `scene.js` → `engine.js` → `fx.js` → `net.js` → `social.js` → `game.js`. Cada uno es una IIFE que publica su API en `window`.
 
 ## Sesión
 

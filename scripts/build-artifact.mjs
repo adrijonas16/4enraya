@@ -6,9 +6,8 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 
 const out = 'dist-artifact';
-// la librería de Supabase (con su versión fijada) y la conexión anticipada al CDN
-const CDN = /^\s*<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase[^\n]*\n/m;
-const PRECONNECT = /^\s*<link rel="preconnect" href="https:\/\/cdn\.jsdelivr\.net"[^\n]*\n/m;
+// la librería de Supabase (la página de Claude no puede conectarse a Supabase)
+const CDN = /^\s*<script src="\.\.\/js\/vendor\/supabase-[^\n]*\n/m;
 const SHIM = `    <script>
         window.__ARTIFACT = true;
         try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); }
@@ -26,7 +25,7 @@ await rm(out, { recursive: true, force: true });
 await mkdir(out);
 for (const dir of ['css', 'fonts', 'js', 'html']) await cp(dir, `${out}/${dir}`, { recursive: true });
 
-const strip = html => html.replace(CDN, '').replace(PRECONNECT, '');
+const strip = html => html.replace(CDN, '');
 const game = strip(await readFile('html/game.html', 'utf8')).replace('<head>\n', `<head>\n${SHIM}`);
 await writeFile(`${out}/html/game.html`, game);
 await writeFile(`${out}/index.html`, game.replaceAll('../', ''));

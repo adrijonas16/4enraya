@@ -81,7 +81,7 @@ class API {
         const { data: { session } } = await this.supabase.auth.getSession();
         if (!session) return null;
         const { data, error } = await this.supabase.rpc('login_with_auth');
-        if (error || !data || !data.length) throw new Error('No se pudo entrar con Google');
+        if (error || !data || !data.length) throw new Error(API.friendly(error, 'No se pudo entrar con Google'));
         const user = { ...data[0], google: true };
         localStorage.setItem('user', JSON.stringify(user));
         return user;

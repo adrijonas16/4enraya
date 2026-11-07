@@ -1131,7 +1131,7 @@ button.mode:hover, .mode-ai:hover { transform: translateY(-2px); box-shadow: ins
 .modes-title { font-size: var(--step-0); font-weight: 700; color: var(--bone-dim); margin-bottom: 10px; }
 .home-footer { grid-column: 1 / -1; order: 3; justify-content: flex-start; padding-left: 0; }
 .signin-link { display: inline-grid; place-items: center; background: var(--bone); color: var(--felt-deep); text-decoration: none; }
-.signin-link:hover { background: #fff; }
+.signin-link:hover { filter: brightness(1.08); }
 .signin-link[hidden] { display: none; }
 .in-artifact .site-footer a[href$="terminos.html"], .in-artifact .site-footer a[href$="privacidad.html"] { display: none; }
 

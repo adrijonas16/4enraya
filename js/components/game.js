@@ -892,9 +892,9 @@
             const p = E.POWERS[power];
             if (s.charges[s.turn] < p.cost) { this.deny(`${p.name} necesita ${p.cost} cargas`); return; }
             if (power === 'double') {
-                Analytics.track('power_used', { power });
                 if (s.doubleArmed[s.turn]) { this.deny('Ya tienes la doble ficha preparada'); return; }
                 E.applyPower(s, 'double');
+                Analytics.track('power_used', { power });
                 sound.play('charge');
                 this.toast('Doble ficha lista: tu próxima tirada suelta dos');
                 this.state.seq++; this.push();

@@ -44,6 +44,10 @@
     --ice:         #bfe6ff;
     --danger:      #ff6b5e;
     --ok:          #7fe3a2;
+    --text:        #dfe5e2;   /* texto largo en páginas de lectura */
+    --panel-solid: rgba(9, 26, 34, .96);  /* avisos flotantes opacos */
+    --cobalt-edge: #0d2577;   /* canto inferior del plástico azul */
+    --hole:        #0b1d4b;   /* agujero vacío del tablero clásico */
 
     /* tipo */
     --font: 'Archivo', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
@@ -322,7 +326,7 @@ input:focus { outline: none; border-color: var(--amber); background: rgba(8, 24,
     transform: translateX(-50%);
     padding: 18px 20px;
     border-radius: var(--radius-l);
-    background: rgba(9, 26, 34, .96);
+    background: var(--panel-solid);
     box-shadow: inset 0 0 0 1px rgba(241, 235, 221, .14), 0 24px 50px -12px rgba(0, 0, 0, .8);
     animation: consent-in .4s var(--ease-out);
 }
@@ -385,7 +389,7 @@ input[aria-invalid="true"] { border-color: var(--danger); }
 .doc .updated { color: var(--bone-dim); font-size: var(--step--1); margin-bottom: 28px; }
 .doc h2 { font-size: var(--step-2); font-weight: 800; font-stretch: 75%; margin: 32px 0 8px; line-height: 1.15; }
 .doc h3 { font-size: var(--step-1); font-weight: 700; margin: 18px 0 6px; }
-.doc p, .doc li { max-width: 68ch; color: #dfe5e2; }
+.doc p, .doc li { max-width: 68ch; color: var(--text); }
 .doc p + p { margin-top: 10px; }
 .doc ul { padding-left: 1.2em; margin: 8px 0; }
 .doc li + li { margin-top: 6px; }
@@ -405,10 +409,10 @@ input[aria-invalid="true"] { border-color: var(--danger); }
     margin-bottom: 26px;
     border-radius: 18px;
     background: linear-gradient(160deg, var(--cobalt-hi), var(--cobalt) 40%, var(--cobalt-lo));
-    box-shadow: inset 0 2px 0 rgba(255,255,255,.3), 0 6px 0 #0d2577, 0 24px 40px -12px rgba(0,0,0,.6);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.3), 0 6px 0 var(--cobalt-edge), 0 24px 40px -12px rgba(0,0,0,.6);
     transform: rotate(-3deg);
 }
 .nf-board .disc { --d: 48px; }
-.nf-gap { width: 48px; height: 48px; border-radius: 50%; background: #0b1d4b; box-shadow: inset 0 3px 8px rgba(0,0,0,.6); animation: nf-pulse 1.6s ease-in-out infinite; }
+.nf-gap { width: 48px; height: 48px; border-radius: 50%; background: var(--hole); box-shadow: inset 0 3px 8px rgba(0,0,0,.6); animation: nf-pulse 1.6s ease-in-out infinite; }
 @keyframes nf-pulse { 50% { box-shadow: inset 0 3px 8px rgba(0,0,0,.6), 0 0 0 4px rgba(245,185,21,.5); } }
 .nf-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 22px; }

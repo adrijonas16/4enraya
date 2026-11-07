@@ -10,7 +10,7 @@
 - **Animaciones:** Web Animations API (`el.animate`) sobre `transform` y `opacity`. Nada de animar `top`, `left`, `width`.
 - **Estado:** el estado de la partida solo cambia mediante funciones de `Engine`. La interfaz nunca edita `state.cells` directamente (la única excepción documentada es reconstruir una tirada remota en `applyRemote`).
 - **DOM:** `document.getElementById` mediante el atajo `$`. Para texto de usuarios, `textContent`. `innerHTML` solo con plantillas nuestras sin datos externos.
-- **Sin dependencias nuevas en el navegador** salvo acuerdo previo. Supabase llega por CDN.
+- **Sin dependencias nuevas en el navegador** salvo acuerdo previo. Las que hay viven en `js/vendor/` con la versión en el nombre del archivo. Para actualizar Supabase: `npm pack @supabase/supabase-js@X`, copia `dist/umd/supabase.js` a `js/vendor/supabase-X.js`, cambia las rutas en los HTML y en `tests/e2e/helpers.js` no hace falta tocar nada.
 
 ## CSS
 

@@ -15,7 +15,7 @@ description: Medir algo nuevo con Google Analytics, añadir un servicio de terce
 ## Añadir un servicio de terceros (script, fuente, API)
 
 1. ¿Es imprescindible? Si solo mide o personaliza, va detrás del consentimiento (ver `js/consent.js`).
-2. Fija la versión. Si es un script de CDN, añade `integrity` (SHA-384) y `crossorigin="anonymous"`.
+2. Fija la versión. Las librerías se copian a `js/vendor/` con la versión en el nombre y su licencia; no se cargan desde un CDN.
 3. Añade su dominio a la CSP de `vercel.json` (solo la directiva que haga falta).
 4. Añádelo a la lista de proveedores de `html/privacidad.html`.
 

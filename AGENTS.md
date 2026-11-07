@@ -34,6 +34,7 @@ js/net.js                online por salas de la página de Claude y compresión 
 js/fx.js                 sonido sintetizado (WebAudio) y partículas (canvas)
 js/scene.js              fondo animado
 js/utils/api.js          acceso a Supabase. Única capa que habla con la base de datos
+js/vendor/               librerías de terceros con versión fija (supabase-js) y sus licencias
 js/components/game.js    BoardView (render y animaciones), DemoBoard, App (flujo, UI, online)
 js/components/social.js  amigos, presencia y retos
 js/components/login.js   pantalla de entrada
@@ -74,7 +75,7 @@ npm run build:artifact   # genera dist-artifact/ para la página de Claude
 10. **Textos de la interfaz en español**, en minúscula inicial, con verbos claros y sin jerga técnica. Los errores dicen qué pasó y qué hacer. Ver `docs/CONVENTIONS.md`.
 11. **Privacidad primero.** Nada de analítica, cookies ni servicios de terceros nuevos sin consentimiento: los eventos se envían solo con `Analytics.track(nombre, datos)` y nunca llevan datos personales (nombres, emails, códigos de sala). Si cambia qué datos se tratan, se actualiza `html/privacidad.html` y `SITE.policyVersion` en el mismo PR.
 12. **Formularios:** se validan con `Validate` en el navegador, con mensajes por campo (`aria-invalid` + `aria-describedby`), y con la misma regla en la base de datos. Ningún formulario nuevo sin protección antispam (campo trampa, tiempo mínimo o límite de frecuencia).
-13. **Seguridad de la web:** la política de contenido (CSP) de `vercel.json` solo permite los dominios que se usan. Un script, fuente o API externa nueva exige añadir su dominio ahí y fijar la versión (con `integrity` si es un script de CDN). Sin scripts en línea en el HTML.
+13. **Seguridad de la web:** la política de contenido (CSP) de `vercel.json` solo permite los dominios que se usan. Las librerías de terceros se sirven desde el propio sitio en `js/vendor/` con la versión en el nombre (`supabase-2.119.0.js`) y su licencia al lado; nada de CDN. Una API o servicio externo nuevo exige añadir su dominio a la CSP. Sin scripts en línea en el HTML.
 14. **SEO y vista previa:** toda página nueva lleva título (≤ 60 caracteres), descripción (50–160), `canonical`, Open Graph e iconos (copia la cabecera de una existente) y, si es pública, entra en `sitemap.xml`.
 15. **No romper lo que funciona:** si un cambio toca algo que cubren las pruebas E2E, se ejecutan antes de dar el trabajo por terminado.
 
